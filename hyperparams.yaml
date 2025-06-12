@@ -3,7 +3,7 @@ debug: False
 device: cuda
 
 eval: {
-  eval: True,
+  eval: False,
   envs_num: 8,
   rollouts: 200,
 }
@@ -36,7 +36,7 @@ iql: {
     tau: 0.005,
     beta: 3.0,
     discount: 0.99,
-    max_timesteps: 1000000,
+    max_timesteps: 2000000,
     vf_lr: 3.0e-4,
     qf_lr: 3.0e-4,
     actor_lr: 3.0e-4,
@@ -46,7 +46,7 @@ iql: {
   },
   eval: {
     eval_freq: 5000,
-    num_episodes: 10,
-    num_longer_episodes: 100,
+    episodes_num: 10,
+    longer_episodes_num: 100,
   }
 }

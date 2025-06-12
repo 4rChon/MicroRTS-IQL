@@ -1,9 +1,9 @@
 # modified from source: https://github.com/gwthomas/IQL-PyTorch
 # https://arxiv.org/pdf/2110.06169.pdf
+import argparse
 import copy
 from datetime import datetime
 from pathlib import Path
-import uuid
 from dataclasses import asdict
 from typing import Any, Dict, List
 
@@ -33,25 +33,13 @@ def soft_update(target: nn.Module, source: nn.Module, tau: float):
     for target_param, source_param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_((1 - tau) * target_param.data + tau * source_param.data)
 
-def wandb_init(config: TrainConfig) -> None:
-    wandb.init(
-        config=asdict(config),
-        project=config.environment.project,
-        group=config.environment.group,
-    )
-
-    # get run name from wandb
-    run_name = wandb.run.name
-    config.environment.name = run_name
-    print(f"Run name: {run_name}")
-
 @torch.no_grad()
 def eval_actor(
-    env: gym_microrts.envs.vec_env.MicroRTSGridModeVecEnv, actor: nn.Module, device: str, n_episodes: int, seed: int
+    env: gym_microrts.envs.vec_env.MicroRTSGridModeVecEnv, actor: nn.Module, device: str, episodes_num: int
 ) -> np.ndarray:
     actor.eval()
     episode_rewards = []
-    for _ in range(n_episodes):
+    for _ in range(episodes_num):
         state, done = env.reset(), False
         episode_reward = 0.0
         while not done:
@@ -108,17 +96,17 @@ class ImplicitQLearning:
         self.device = device
 
     def _update_v(self, observations, actions, log_dict) -> torch.Tensor:
-        # Update value function
         with torch.no_grad():
             target_q = self.q_target(observations, actions)
 
         v = self.vf(observations)
         adv = target_q - v
         v_loss = asymmetric_l2_loss(adv, self.iql_tau)
-        log_dict["value_loss"] = v_loss.item()
         self.v_optimizer.zero_grad()
         v_loss.backward()
         self.v_optimizer.step()
+
+        log_dict["value_loss"] = v_loss.item()
         return adv
 
     def _update_q(
@@ -134,12 +122,12 @@ class ImplicitQLearning:
         qs = self.qf.both(observations, actions)
         q_loss = sum(F.mse_loss(q, targets, reduction="sum") for q in qs) / len(qs)
         # q_loss = sum(F.mse_loss(q, targets) for q in qs) / len(qs)
-        log_dict["q_loss"] = q_loss.item()
         self.q_optimizer.zero_grad()
         q_loss.backward()
         self.q_optimizer.step()
 
-        # Update target Q network
+        log_dict["q_loss"] = q_loss.item()
+
         soft_update(self.q_target, self.qf, self.tau)
 
     def _update_policy(
@@ -163,11 +151,12 @@ class ImplicitQLearning:
         policy_loss = (exp_adv * nll)[action_masks != 0]
         policy_loss = policy_loss.sum() / exp_adv.shape[0]
 
-        log_dict["actor_loss"] = policy_loss.item()
         self.actor_optimizer.zero_grad()
         policy_loss.backward()
         self.actor_optimizer.step()
         self.actor_lr_schedule.step()
+
+        log_dict["actor_loss"] = policy_loss.item()
         log_dict["actor_lr"] = self.actor_optimizer.param_groups[0]["lr"]
 
     def train(self, batch: TensorBatch) -> Dict[str, float]:
@@ -184,13 +173,10 @@ class ImplicitQLearning:
 
         with torch.no_grad():
             next_v = self.vf(next_observations)
-        # Update value function
         adv = self._update_v(observations, actions, log_dict)
         rewards = rewards.squeeze(dim=-1)
         dones = dones.squeeze(dim=-1)
-        # Update Q function
         self._update_q(next_v, observations, actions, rewards, dones, log_dict)
-        # Update actor
         self._update_policy(adv, observations, actions, action_masks, log_dict)
 
         return log_dict
@@ -222,7 +208,6 @@ class ImplicitQLearning:
         self.total_it = state_dict["total_it"]
 
 def train(config: TrainConfig):
-    # Set seeds
     seed = config.seed
     set_seed_everywhere(seed)
 
@@ -269,82 +254,59 @@ def train(config: TrainConfig):
         device = config.device,
     )
 
-    wandb_init(config)
-
-    maps = sample_maps(config.iql.eval.num_longer_episodes, "eval")
+    maps = sample_maps(config.iql.eval.longer_episodes_num, "eval")
     env, _, _ = make_eval_env({ "max_steps": 2000 }, 1, maps, seed, ais=[gym_microrts.microrts_ai.coacAI])
 
     now = datetime.now().strftime("%Y.%m.%d/%H%M%S")
     save_path = Path(f"{config.environment.save_dir}/{config.environment.group}/{now}-{config.environment.name}")
     save_path.mkdir(parents=True, exist_ok=True)
 
+
     for t in range(int(config.iql.training.max_timesteps)):
-        # batch = replay_buffer.sample(reward_scale=config.reward_scale, device=config.device)
         batch = replay_buffer.sample_next(batch_size=config.iql.training.batch_size, reward_scale=config.iql.training.reward_scale)
         batch = [torch.tensor(b, dtype=torch.float32, device=config.device) for b in batch]
         log_dict = trainer.train(batch)
-        wandb.log(log_dict, step=trainer.total_it)
-        # Evaluate episode
-        if (t + 1) % config.data.log_interval == 0:
-            print(f"Training step: {trainer.total_it}")
-            print(f"Actor loss: {log_dict['actor_loss']:.3f}")
-            print(f"Q loss: {log_dict['q_loss']:.3f}")
-            print(f"Value loss: {log_dict['value_loss']:.3f}")
-            print("---------------")
-        if (t + 1) % config.data.save_interval == 0:
-            # print(f"Saving model at step {trainer.total_it}")
-            # wandb.save("*.pth")
-            print(f"Saving model at step {trainer.total_it} to {save_path}")
-            torch.save(
-                trainer.state_dict(),
-                f"{save_path}/model_{trainer.total_it}.pth",
-            )
 
-            # perform longer evaluation
-            eval_scores = eval_actor(
-                env,
-                actor,
-                device=config.device,
-                n_episodes=config.iql.eval.num_longer_episodes,
-                seed=seed,
-            )
-            eval_score = eval_scores.mean()
-            print("---------------------------------------")
-            print(
-                f"Evaluation over {config.iql.eval.num_longer_episodes} episodes: "
-                f"{eval_score:.3f}"
-            )
-            print("---------------------------------------")
-            wandb.log(
-                {"eval_score_long": eval_score}, step=trainer.total_it
-            )
+        if (t + 1) % config.data.log_interval == 0:
+            wandb.log(log_dict, step=trainer.total_it)
+            print(f"Training step: {trainer.total_it}")
+        if (t + 1) % config.data.save_interval == 0:
+            print(f"Saving model at step {trainer.total_it} to {save_path}")
+            torch.save(trainer.state_dict(), f"{save_path}/model_{trainer.total_it}.pth")
+
+            eval_score = eval_actor(env, actor, config.device, config.iql.eval.longer_episodes_num).mean()
+            wandb.log({"eval_score_long": eval_score}, step=trainer.total_it)
         elif (t + 1) % config.iql.eval.eval_freq == 0:
-            print(f"Time steps: {t + 1}")
-            eval_scores = eval_actor(
-                env,
-                actor,
-                device=config.device,
-                n_episodes=config.iql.eval.num_episodes,
-                seed=config.seed,
-            )
-            eval_score = eval_scores.mean()
-            print("---------------------------------------")
-            print(
-                f"Evaluation over {config.iql.eval.num_episodes} episodes: "
-                f"{eval_score:.3f}"
-            )
-            print("---------------------------------------")
-            wandb.log(
-                {"eval_score": eval_score}, step=trainer.total_it
-            )
+            eval_score = eval_actor(env, actor, config.device, config.iql.eval.episodes_num).mean()
+            wandb.log({"eval_score": eval_score}, step=trainer.total_it)
 
     replay_buffer.close()
     env.close()
-    wandb.finish()
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--note", type=str, default="", help="Note for the experiment", required=True)
+
     with open("hyperparams.yaml", "r") as f:
         config_dict = yaml.safe_load(f)
+
     config = TrainConfig.from_dict(config_dict)
+    config.note = parser.parse_args().note
+
+    wandb.init(
+        config=asdict(config),
+        project=config.environment.project,
+        group=config.environment.group,
+        notes=config.note,
+    )
+
+    # get run name from wandb
+    run_name = wandb.run.name
+    config.environment.name = run_name
+
+    wandb.save("hyperparams.yaml")
+
     train(config)
+
+    wandb.finish()

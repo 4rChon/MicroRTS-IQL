@@ -3,7 +3,7 @@ from typing import Any
 
 @dataclass
 class EvalConfig:
-    eval: bool = True
+    eval: bool = False
     envs_num: int = 8
     rollouts: int = 200
 
@@ -46,8 +46,8 @@ class IQLTrainingConfig:
 
 @dataclass
 class IQLEvalConfig:
-    num_episodes: int = 10
-    num_longer_episodes: int = 100
+    episodes_num: int = 10
+    longer_episodes_num: int = 100
     eval_freq: int = 1000
 
 @dataclass
@@ -58,6 +58,7 @@ class IQLConfig:
 
 @dataclass
 class TrainConfig:
+    note: str = ""
     seed: int = 42
     debug: bool = False
     device: str = "cuda"
