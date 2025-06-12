@@ -79,7 +79,8 @@ class TransitionSet():
         return self.size
 
     def sample_next(self, batch_size: int, reward_scale: float = 1.0):
-        chunk_idx = (((self._idx_pointer // self.chunk_size) * 12) + (self._worker_id)) % self.chunk_count
+        # chunk_idx = (((self._idx_pointer // self.chunk_size) * 12) + (self._worker_id)) % self.chunk_count
+        chunk_idx = (self._idx_pointer // self.chunk_size) % self.chunk_count
         chunk_idx_within = self._idx_pointer % self.chunk_size
         from_idx = chunk_idx_within
         to_idx = min(chunk_idx_within + batch_size, self.chunk_size)
