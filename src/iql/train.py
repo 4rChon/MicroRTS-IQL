@@ -1,10 +1,8 @@
 # modified from source: https://github.com/gwthomas/IQL-PyTorch
 # https://arxiv.org/pdf/2110.06169.pdf
-import argparse
 import copy
 from datetime import datetime
 from pathlib import Path
-from dataclasses import asdict
 from typing import Any, Dict, List
 
 import gym_microrts
@@ -18,10 +16,9 @@ import torch.nn.functional as F
 import wandb
 
 from env_utils import get_env_spec, make_eval_env, sample_maps
-from experiment.iql.iql_model import IQLNetwork
-from experiment.iql.transition_set import TransitionSet
-from experiment.iql.train_config import IQLTrainingConfig, TrainConfig
-import yaml
+from iql.iql_model import IQLNetwork
+from iql.transition_set import TransitionSet
+from iql.train_config import IQLTrainingConfig, TrainConfig
 
 from utils import set_seed_everywhere
 
@@ -282,31 +279,3 @@ def train(config: TrainConfig):
 
     replay_buffer.close()
     env.close()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--note", type=str, default="", help="Note for the experiment", required=True)
-
-    with open("hyperparams.yaml", "r") as f:
-        config_dict = yaml.safe_load(f)
-
-    config = TrainConfig.from_dict(config_dict)
-    config.note = parser.parse_args().note
-
-    wandb.init(
-        config=asdict(config),
-        project=config.environment.project,
-        group=config.environment.group,
-        notes=config.note,
-    )
-
-    # get run name from wandb
-    run_name = wandb.run.name
-    config.environment.name = run_name
-
-    wandb.save("hyperparams.yaml")
-
-    train(config)
-
-    wandb.finish()

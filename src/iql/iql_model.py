@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from experiment.iql.train_config import IQLModelConfig
+from iql.train_config import IQLModelConfig
 
 
 TensorBatch = List[torch.Tensor]
