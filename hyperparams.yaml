@@ -5,7 +5,7 @@ device: cuda
 eval: {
   eval: False,
   envs_num: 8,
-  rollouts: 200,
+  rollouts_num: 200,
 }
 
 environment: {
@@ -13,8 +13,7 @@ environment: {
   project: PhD,
   group: iql,
   name: microrts,
-  max_steps: 2000,
-  self_play: False,
+  episode_steps_max: 2000,
 }
 
 data: {

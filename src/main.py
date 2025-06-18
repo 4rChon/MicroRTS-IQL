@@ -6,7 +6,6 @@ from datetime import datetime
 from pathlib import Path
 
 import wandb
-
 import yaml
 
 from iql.train_config import TrainConfig
@@ -42,6 +41,6 @@ if __name__ == "__main__":
 
     wandb.save("hyperparams.yaml")
 
-    train(config)
+    train(config, experiment_dir)
 
     wandb.finish()

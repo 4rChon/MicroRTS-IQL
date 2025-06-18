@@ -50,7 +50,7 @@ def make_env(max_steps, num_envs, seed, map_set, ais=None):
 def sample_maps(num_maps, map_set):
     return random.sample(maps[map_set], num_maps)
 
-def make_eval_env(variant, num_envs, map_paths, seed, ais=None):
+def make_eval_env(max_steps, num_envs, map_paths, seed, ais=None):
     if ais is None:
         ais = default_ais
     ai2s = random.sample(ais, num_envs)
@@ -63,7 +63,7 @@ def make_eval_env(variant, num_envs, map_paths, seed, ais=None):
     env = MicroRTSGridModeVecEnv(
         num_selfplay_envs=0,
         num_bot_envs=num_envs,
-        max_steps=variant["max_steps"],
+        max_steps=max_steps,
         ai2s=ai2s,
         map_paths=map_paths[:num_envs],
         cycle_maps=map_paths,
@@ -77,8 +77,8 @@ def make_eval_env(variant, num_envs, map_paths, seed, ais=None):
 
     return env, ai2s, map_paths
 
-def get_env_spec(variant):
-    env, _, _ = make_env(variant["max_steps"], 1, variant["seed"], "eval")
+def get_env_spec(max_steps):
+    env, _, _ = make_env(max_steps, 1, 0, "eval")
     state_dim = env.observation_space.shape
     action_dim = env.action_plane_space.nvec.tolist()
 

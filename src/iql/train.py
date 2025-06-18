@@ -89,7 +89,7 @@ class ImplicitQLearning:
         )
         # self.actor_lr_schedule = CosineAnnealingLR(self.actor_optimizer, max_steps)
 
-        self.total_it = 0
+        self.total_steps = 0
         self.device = device
 
     def _update_v(self, observations, actions, log_dict) -> torch.Tensor:
@@ -157,7 +157,6 @@ class ImplicitQLearning:
         log_dict["actor_lr"] = self.actor_optimizer.param_groups[0]["lr"]
 
     def train(self, batch: TensorBatch) -> Dict[str, float]:
-        self.total_it += 1
         (
             observations,
             actions,
@@ -176,6 +175,8 @@ class ImplicitQLearning:
         self._update_q(next_v, observations, actions, rewards, dones, log_dict)
         self._update_policy(adv, observations, actions, action_masks, log_dict)
 
+        self.total_steps += 1
+
         return log_dict
 
     def state_dict(self) -> Dict[str, Any]:
@@ -187,7 +188,7 @@ class ImplicitQLearning:
             "actor": self.actor.state_dict(),
             "actor_optimizer": self.actor_optimizer.state_dict(),
             "actor_lr_schedule": self.actor_lr_schedule.state_dict(),
-            "total_it": self.total_it,
+            "total_it": self.total_steps,
         }
 
     def load_state_dict(self, state_dict: Dict[str, Any]):
@@ -202,16 +203,13 @@ class ImplicitQLearning:
         self.actor_optimizer.load_state_dict(state_dict["actor_optimizer"])
         self.actor_lr_schedule.load_state_dict(state_dict["actor_lr_schedule"])
 
-        self.total_it = state_dict["total_it"]
+        self.total_steps = state_dict["total_it"]
 
-def train(config: TrainConfig):
+def train(config: TrainConfig, save_path: Path):
     seed = config.seed
     set_seed_everywhere(seed)
 
-    state_dim, action_dim, _ = get_env_spec({
-        "max_steps": 2000,
-        "seed": seed,
-    })
+    state_dim, action_dim, _ = get_env_spec(config.environment.episode_steps_max)
 
     replay_buffer = TransitionSet(
         config.data.buffer_path,
@@ -252,30 +250,25 @@ def train(config: TrainConfig):
     )
 
     maps = sample_maps(config.iql.eval.longer_episodes_num, "eval")
-    env, _, _ = make_eval_env({ "max_steps": 2000 }, 1, maps, seed, ais=[gym_microrts.microrts_ai.coacAI])
+    env, _, _ = make_eval_env(config.environment.episode_steps_max, 1, maps, seed, ais=[gym_microrts.microrts_ai.coacAI])
 
-    now = datetime.now().strftime("%Y.%m.%d/%H%M%S")
-    save_path = Path(f"{config.environment.save_dir}/{config.environment.group}/{now}-{config.environment.name}")
-    save_path.mkdir(parents=True, exist_ok=True)
-
-
-    for t in range(int(config.iql.training.max_timesteps)):
+    for step in range(int(config.iql.training.max_timesteps)):
         batch = replay_buffer.sample_next(batch_size=config.iql.training.batch_size, reward_scale=config.iql.training.reward_scale)
         batch = [torch.tensor(b, dtype=torch.float32, device=config.device) for b in batch]
         log_dict = trainer.train(batch)
 
-        if (t + 1) % config.data.log_interval == 0:
-            wandb.log(log_dict, step=trainer.total_it)
-            print(f"Training step: {trainer.total_it}")
-        if (t + 1) % config.data.save_interval == 0:
-            print(f"Saving model at step {trainer.total_it} to {save_path}")
-            torch.save(trainer.state_dict(), f"{save_path}/model_{trainer.total_it}.pth")
+        if (step + 1) % config.data.log_interval == 0:
+            wandb.log(log_dict, step=trainer.total_steps)
+            print(f"Training step: {trainer.total_steps}")
+        if (step + 1) % config.data.save_interval == 0:
+            print(f"Saving model at step {trainer.total_steps} to {save_path}")
+            torch.save(trainer.state_dict(), f"{save_path}/model_{trainer.total_steps}.pth")
 
             eval_score = eval_actor(env, actor, config.device, config.iql.eval.longer_episodes_num).mean()
-            wandb.log({"eval_score_long": eval_score}, step=trainer.total_it)
-        elif (t + 1) % config.iql.eval.eval_freq == 0:
+            wandb.log({"eval_score_long": eval_score}, step=trainer.total_steps)
+        elif (step + 1) % config.iql.eval.eval_freq == 0:
             eval_score = eval_actor(env, actor, config.device, config.iql.eval.episodes_num).mean()
-            wandb.log({"eval_score": eval_score}, step=trainer.total_it)
+            wandb.log({"eval_score": eval_score}, step=trainer.total_steps)
 
     replay_buffer.close()
     env.close()

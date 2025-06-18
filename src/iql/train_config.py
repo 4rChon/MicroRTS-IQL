@@ -5,7 +5,7 @@ from typing import Any
 class EvalConfig:
     eval: bool = False
     envs_num: int = 8
-    rollouts: int = 200
+    rollouts_num: int = 200
 
 @dataclass
 class EnvConfig:
@@ -13,8 +13,7 @@ class EnvConfig:
     project: str = "PhD"
     group: str = "iql"
     name: str = "microrts"
-    max_steps: int = 2000
-    self_play: bool = False
+    episode_steps_max: int = 2000
 
 @dataclass
 class DataConfig:
