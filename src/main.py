@@ -13,8 +13,20 @@ from iql.train import train
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--note", type=str, default="", help="Note for the experiment", required=True)
-    parser.add_argument("--config", type=str, default="hyperparams.yaml", help="Path to hyperparams config file")
+    parser.add_argument(
+        "--note",
+        type=str,
+        default="",
+        help="Note for the experiment",
+        required=True
+    )
+
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="hyperparams.yaml",
+        help="Path to hyperparams config file"
+    )
 
     args = parser.parse_args()
 
@@ -27,8 +39,11 @@ if __name__ == "__main__":
     time = datetime.now().strftime("%H_%M_%S")
     date = datetime.now().strftime("%Y_%m_%d")
     config.environment.name = f"{config.environment.name}_{time}"
-    
-    experiment_dir = Path(f"{config.environment.save_dir}/{config.environment.group}/{date}/{config.environment.name}")
+    prefix = f"{config.environment.save_dir}/{config.environment.group}"
+
+    experiment_dir = Path(
+        f"{prefix}/{date}/{config.environment.name}"
+    )
 
     wandb.init(
         config=asdict(config),

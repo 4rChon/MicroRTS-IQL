@@ -2,7 +2,8 @@ import random
 import torch
 import numpy as np
 
-def set_seed_everywhere(seed):
+
+def set_seed_everywhere(seed: int):
     torch.manual_seed(seed)
     # torch.backends.cudnn.deterministic = True
     # torch.use_deterministic_algorithms(True)

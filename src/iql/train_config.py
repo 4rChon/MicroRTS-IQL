@@ -1,11 +1,16 @@
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
+
+import torch
+
 
 @dataclass
 class EvalConfig:
     eval: bool = False
     envs_num: int = 8
     rollouts_num: int = 200
+
 
 @dataclass
 class EnvConfig:
@@ -15,11 +20,13 @@ class EnvConfig:
     name: str = "microrts"
     episode_steps_max: int = 2000
 
+
 @dataclass
 class DataConfig:
-    buffer_path: str = "data/8x8/1v1/replay_buffer_3k"
+    buffer_path: Path = Path("data/8x8/1v1/replay_buffer_3k")
     save_interval: int = 10000
     log_interval: int = 10
+
 
 @dataclass
 class IQLModelConfig:
@@ -28,6 +35,7 @@ class IQLModelConfig:
     load: bool = False
     load_path: str = "model/model.pt"
 
+
 @dataclass
 class IQLTrainingConfig:
     train: bool = True
@@ -35,7 +43,7 @@ class IQLTrainingConfig:
     beta: float = 3.0
     iql_tau: float = 0.7
     discount: float = 0.99
-    max_timesteps: int = 1e6
+    max_timesteps: int = 1000000
     vf_lr: float = 3e-4
     qf_lr: float = 3e-4
     actor_lr: float = 3e-4
@@ -43,11 +51,13 @@ class IQLTrainingConfig:
     buffer_size: int = 3000
     reward_scale: float = 1.0
 
+
 @dataclass
 class IQLEvalConfig:
     episodes_num: int = 10
     longer_episodes_num: int = 100
     eval_freq: int = 1000
+
 
 @dataclass
 class IQLConfig:
@@ -55,19 +65,20 @@ class IQLConfig:
     training: IQLTrainingConfig = field(default_factory=IQLTrainingConfig)
     eval: IQLEvalConfig = field(default_factory=IQLEvalConfig)
 
+
 @dataclass
 class TrainConfig:
     note: str = ""
     seed: int = 42
     debug: bool = False
-    device: str = "cuda"
+    device: torch.device = torch.device("cuda")
     eval: EvalConfig = field(default_factory=EvalConfig)
     environment: EnvConfig = field(default_factory=EnvConfig)
     data: DataConfig = field(default_factory=DataConfig)
     iql: IQLConfig = field(default_factory=IQLConfig)
 
     @classmethod
-    def from_dict(cls, config_dict: dict[str: Any]) -> 'TrainConfig':
+    def from_dict(cls, config_dict: dict[str, Any]) -> 'TrainConfig':
         config_dict['eval'] = EvalConfig(**config_dict['eval'])
         config_dict['environment'] = EnvConfig(**config_dict['environment'])
         config_dict['data'] = DataConfig(**config_dict['data'])

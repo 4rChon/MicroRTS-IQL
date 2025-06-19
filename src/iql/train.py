@@ -1,14 +1,13 @@
 # modified from source: https://github.com/gwthomas/IQL-PyTorch
 # https://arxiv.org/pdf/2110.06169.pdf
 import copy
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import gym_microrts
+import gym_microrts.envs
 import gym_microrts.envs.vec_env
 import gym_microrts.microrts_ai
-import gym_microrts.envs
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,24 +15,32 @@ import torch.nn.functional as F
 import wandb
 
 from env_utils import get_env_spec, make_eval_env, sample_maps
-from iql.iql_model import IQLNetwork
-from iql.transition_set import TransitionSet
+from iql.iql_model import ActorPolicy, IQLNetwork, TwinQ, ValueFunction
 from iql.train_config import IQLTrainingConfig, TrainConfig
-
+from iql.transition_set import TransitionSet
 from utils import set_seed_everywhere
 
-TensorBatch = List[torch.Tensor]
+TensorBatch = list[torch.Tensor]
 
 EXP_ADV_MAX = 100.0
 
+
 def soft_update(target: nn.Module, source: nn.Module, tau: float):
-    for target_param, source_param in zip(target.parameters(), source.parameters()):
-        target_param.data.copy_((1 - tau) * target_param.data + tau * source_param.data)
+    for target_param, source_param in zip(
+        target.parameters(), source.parameters()
+    ):
+        target_param.data.copy_(
+            (1 - tau) * target_param.data + tau * source_param.data
+        )
+
 
 @torch.no_grad()
 def eval_actor(
-    env: gym_microrts.envs.vec_env.MicroRTSGridModeVecEnv, actor: nn.Module, device: str, episodes_num: int
-) -> np.ndarray:
+    env: gym_microrts.envs.vec_env.MicroRTSGridModeVecEnv,
+    actor: ActorPolicy,
+    device: torch.device,
+    episodes_num: int
+) -> np.ndarray[Any, np.dtype[np.float32]]:
     actor.eval()
     episode_rewards = []
     for _ in range(episodes_num):
@@ -42,7 +49,11 @@ def eval_actor(
         while not done:
             env.render()
             action_mask = env.get_action_mask()
-            action_mask = torch.tensor(action_mask, dtype=torch.float32, device=device)
+            action_mask = torch.tensor(
+                action_mask,
+                dtype=torch.float32,
+                device=device
+            )
             state = torch.tensor(state, dtype=torch.float32, device=device)
             action = actor.act(state, action_mask).detach().cpu().numpy()
             state, reward, done, _ = env.step(action)
@@ -51,6 +62,7 @@ def eval_actor(
 
     actor.train()
     return np.asarray(episode_rewards)
+
 
 def asymmetric_l2_loss(u: torch.Tensor, tau: float) -> torch.Tensor:
     return torch.mean(torch.abs(tau - (u < 0).float()) * u**2)
@@ -61,14 +73,13 @@ class ImplicitQLearning:
         self,
         actor: nn.Module,
         actor_optimizer: torch.optim.Optimizer,
-        q_network: nn.Module,
+        q_network: TwinQ,
         q_optimizer: torch.optim.Optimizer,
-        v_network: nn.Module,
+        v_network: ValueFunction,
         v_optimizer: torch.optim.Optimizer,
         config: IQLTrainingConfig,
-        device: str = "cpu",
+        device: torch.device,
     ):
-        
         self.iql_tau = config.iql_tau
         self.beta = config.beta
         self.discount = config.discount
@@ -87,12 +98,18 @@ class ImplicitQLearning:
             total_steps=config.max_timesteps,
             pct_start=0.45
         )
-        # self.actor_lr_schedule = CosineAnnealingLR(self.actor_optimizer, max_steps)
+        # self.actor_lr_schedule =
+        # CosineAnnealingLR(self.actor_optimizer, max_steps)
 
         self.total_steps = 0
         self.device = device
 
-    def _update_v(self, observations, actions, log_dict) -> torch.Tensor:
+    def _update_v(
+        self,
+        observations: torch.Tensor,
+        actions: torch.Tensor,
+        log_dict: dict[str, Any],
+    ) -> torch.Tensor:
         with torch.no_grad():
             target_q = self.q_target(observations, actions)
 
@@ -113,17 +130,23 @@ class ImplicitQLearning:
         actions: torch.Tensor,
         rewards: torch.Tensor,
         terminals: torch.Tensor,
-        log_dict: Dict,
+        log_dict: dict[str, Any],
     ):
-        targets = rewards + (1.0 - terminals.float()) * self.discount * next_v.detach()
+        targets = rewards \
+            + (1.0 - terminals.float()) \
+            * self.discount \
+            * next_v.detach()
+
         qs = self.qf.both(observations, actions)
-        q_loss = sum(F.mse_loss(q, targets, reduction="sum") for q in qs) / len(qs)
+        q_loss = sum(
+            F.mse_loss(q, targets, reduction="sum") for q in qs
+        ) / len(qs)
         # q_loss = sum(F.mse_loss(q, targets) for q in qs) / len(qs)
         self.q_optimizer.zero_grad()
-        q_loss.backward()
+        q_loss.backward()  # type: ignore
         self.q_optimizer.step()
 
-        log_dict["q_loss"] = q_loss.item()
+        log_dict["q_loss"] = q_loss.item()  # type: ignore
 
         soft_update(self.q_target, self.qf, self.tau)
 
@@ -133,11 +156,12 @@ class ImplicitQLearning:
         observations: torch.Tensor,
         actions: torch.Tensor,
         action_masks: torch.Tensor,
-        log_dict: Dict,
+        log_dict: dict[str, Any],
     ):
         exp_adv = torch.exp(self.beta * adv.detach()).clamp(max=EXP_ADV_MAX)
         policy_out = self.actor(observations, action_masks)
-        # bc_losses = ((policy_out - actions) ** 2).sum(dim=(-1)).mean(dim=(-1, -2))
+        # bc_losses =
+        # ((policy_out - actions) ** 2).sum(dim=(-1)).mean(dim=(-1, -2))
 
         batch_size = observations.shape[0]
 
@@ -156,7 +180,7 @@ class ImplicitQLearning:
         log_dict["actor_loss"] = policy_loss.item()
         log_dict["actor_lr"] = self.actor_optimizer.param_groups[0]["lr"]
 
-    def train(self, batch: TensorBatch) -> Dict[str, float]:
+    def train(self, batch: TensorBatch) -> dict[str, Any]:
         (
             observations,
             actions,
@@ -165,7 +189,7 @@ class ImplicitQLearning:
             next_observations,
             dones,
         ) = batch
-        log_dict = {}
+        log_dict: dict[Any, str] = {}
 
         with torch.no_grad():
             next_v = self.vf(next_observations)
@@ -179,7 +203,7 @@ class ImplicitQLearning:
 
         return log_dict
 
-    def state_dict(self) -> Dict[str, Any]:
+    def state_dict(self) -> dict[str, Any]:
         return {
             "qf": self.qf.state_dict(),
             "q_optimizer": self.q_optimizer.state_dict(),
@@ -191,7 +215,7 @@ class ImplicitQLearning:
             "total_it": self.total_steps,
         }
 
-    def load_state_dict(self, state_dict: Dict[str, Any]):
+    def load_state_dict(self, state_dict: dict[str, Any]):
         self.qf.load_state_dict(state_dict["qf"])
         self.q_optimizer.load_state_dict(state_dict["q_optimizer"])
         self.q_target = copy.deepcopy(self.qf)
@@ -205,11 +229,14 @@ class ImplicitQLearning:
 
         self.total_steps = state_dict["total_it"]
 
+
 def train(config: TrainConfig, save_path: Path):
     seed = config.seed
     set_seed_everywhere(seed)
 
-    state_dim, action_dim, _ = get_env_spec(config.environment.episode_steps_max)
+    state_dim, action_dim, _ = get_env_spec(
+        config.environment.episode_steps_max
+    )
 
     replay_buffer = TransitionSet(
         config.data.buffer_path,
@@ -229,9 +256,15 @@ def train(config: TrainConfig, save_path: Path):
     v_network = iql_network.value
     actor = iql_network.actor
 
-    v_optimizer = torch.optim.Adam(v_network.parameters(), lr=config.iql.training.vf_lr)
-    q_optimizer = torch.optim.Adam(q_network.parameters(), lr=config.iql.training.qf_lr)
-    actor_optimizer = torch.optim.Adam(actor.parameters(), lr=config.iql.training.actor_lr)
+    v_optimizer = torch.optim.Adam(
+        v_network.parameters(), lr=config.iql.training.vf_lr
+    )
+    q_optimizer = torch.optim.Adam(
+        q_network.parameters(), lr=config.iql.training.qf_lr
+    )
+    actor_optimizer = torch.optim.Adam(
+        actor.parameters(), lr=config.iql.training.actor_lr
+    )
 
     print("---------------------------------------")
     print(f"Training IQL, Env: GymMicroRTS, Seed: {seed}")
@@ -239,22 +272,34 @@ def train(config: TrainConfig, save_path: Path):
 
     # Initialize actor
     trainer = ImplicitQLearning(
-        actor = actor,
-        actor_optimizer = actor_optimizer,
-        q_network = q_network,
-        q_optimizer = q_optimizer,
-        v_network = v_network,
-        v_optimizer = v_optimizer,
-        config = config.iql.training,
-        device = config.device,
+        actor=actor,
+        actor_optimizer=actor_optimizer,
+        q_network=q_network,
+        q_optimizer=q_optimizer,
+        v_network=v_network,
+        v_optimizer=v_optimizer,
+        config=config.iql.training,
+        device=config.device,
     )
 
     maps = sample_maps(config.iql.eval.longer_episodes_num, "eval")
-    env, _, _ = make_eval_env(config.environment.episode_steps_max, 1, maps, seed, ais=[gym_microrts.microrts_ai.coacAI])
+    env, _, _ = make_eval_env(
+        config.environment.episode_steps_max,
+        1,
+        maps,
+        seed,
+        ais=[gym_microrts.microrts_ai.coacAI]
+    )
 
     for step in range(int(config.iql.training.max_timesteps)):
-        batch = replay_buffer.sample_next(batch_size=config.iql.training.batch_size, reward_scale=config.iql.training.reward_scale)
-        batch = [torch.tensor(b, dtype=torch.float32, device=config.device) for b in batch]
+        batch = replay_buffer.sample_next(
+            batch_size=config.iql.training.batch_size,
+            reward_scale=config.iql.training.reward_scale
+        )
+        batch = [
+            torch.tensor(b, dtype=torch.float32, device=config.device)
+            for b in batch
+        ]
         log_dict = trainer.train(batch)
 
         if (step + 1) % config.data.log_interval == 0:
@@ -262,12 +307,21 @@ def train(config: TrainConfig, save_path: Path):
             print(f"Training step: {trainer.total_steps}")
         if (step + 1) % config.data.save_interval == 0:
             print(f"Saving model at step {trainer.total_steps} to {save_path}")
-            torch.save(trainer.state_dict(), f"{save_path}/model_{trainer.total_steps}.pth")
+            torch.save(
+                trainer.state_dict(),
+                f"{save_path}/model_{trainer.total_steps}.pth"
+            )
 
-            eval_score = eval_actor(env, actor, config.device, config.iql.eval.longer_episodes_num).mean()
-            wandb.log({"eval_score_long": eval_score}, step=trainer.total_steps)
+            eval_score = eval_actor(
+                env, actor, config.device, config.iql.eval.longer_episodes_num
+            ).mean()
+            wandb.log(
+                {"eval_score_long": eval_score}, step=trainer.total_steps
+            )
         elif (step + 1) % config.iql.eval.eval_freq == 0:
-            eval_score = eval_actor(env, actor, config.device, config.iql.eval.episodes_num).mean()
+            eval_score = eval_actor(
+                env, actor, config.device, config.iql.eval.episodes_num
+            ).mean()
             wandb.log({"eval_score": eval_score}, step=trainer.total_steps)
 
     replay_buffer.close()

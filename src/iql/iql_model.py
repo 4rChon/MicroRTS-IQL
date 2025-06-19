@@ -1,6 +1,6 @@
 # modified from source: https://github.com/gwthomas/IQL-PyTorch
 # https://arxiv.org/pdf/2110.06169.pdf
-from typing import  Callable, List, Optional, Tuple
+from typing import Callable
 
 import torch
 import torch.nn as nn
@@ -8,11 +8,17 @@ import torch.nn.functional as F
 
 from iql.train_config import IQLModelConfig
 
+TensorBatch = list[torch.Tensor]
 
-TensorBatch = List[torch.Tensor]
 
 class SpatialEmbedding(nn.Module):
-    def __init__(self, space_dim, h, w, hidden_size):
+    def __init__(
+        self,
+        space_dim: int,
+        h: int,
+        w: int,
+        hidden_size: int
+    ):
         super().__init__()
         self.space_dim = space_dim
         self.h = h
@@ -20,29 +26,46 @@ class SpatialEmbedding(nn.Module):
         self.hidden_size = hidden_size
 
         self.embed_space = nn.Sequential(
-            nn.Conv2d(self.space_dim, hidden_size // 2, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(
+                self.space_dim,
+                hidden_size // 2,
+                kernel_size=3,
+                stride=1,
+                padding=1
+            ),
             nn.BatchNorm2d(hidden_size // 2),
             nn.GELU(),
             nn.MaxPool2d(3, 2, 1),
-            nn.Conv2d(hidden_size // 2, hidden_size, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(
+                hidden_size // 2,
+                hidden_size,
+                kernel_size=3,
+                stride=1,
+                padding=1
+            ),
             nn.BatchNorm2d(hidden_size),
             nn.GELU(),
             nn.MaxPool2d(3, 2, 1),
             nn.Flatten(),
-            nn.Linear(int(hidden_size * self.h * self.w * 0.25 * 0.25), hidden_size * 2),
+            nn.Linear(
+                int(hidden_size * self.h * self.w * 0.25 * 0.25),
+                hidden_size * 2
+            ),
             nn.GELU(),
             nn.Linear(hidden_size * 2, hidden_size),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         batch_size = x.shape[0]
 
-        x = x.reshape(batch_size, self.h, self.w, self.space_dim).permute(0, 3, 1, 2)
+        x = x.reshape(batch_size, self.h, self.w, self.space_dim)
+        x = x.permute(0, 3, 1, 2)
 
         return self.embed_space(x).reshape(batch_size, self.hidden_size)
 
+
 class Squeeze(nn.Module):
-    def __init__(self, dim=-1):
+    def __init__(self, dim: int = -1):
         super().__init__()
         self.dim = dim
 
@@ -53,16 +76,16 @@ class Squeeze(nn.Module):
 class MLP(nn.Module):
     def __init__(
         self,
-        dims,
+        dims: list[int],
         activation_fn: Callable[[], nn.Module] = nn.ReLU,
-        output_activation_fn: Callable[[], nn.Module] = None,
+        output_activation_fn: Callable[[], nn.Module] | None = None,
         squeeze_output: bool = False,
-        dropout: Optional[float] = None,
+        dropout: float | None = None,
     ):
         super().__init__()
         n_dims = len(dims)
-        if n_dims < 2:
-            raise ValueError("MLP requires at least two dims (input and output)")
+        assert n_dims >= 2, \
+            "MLP must have at least two dimensions (input and output)"
 
         layers = []
         for i in range(n_dims - 2):
@@ -84,8 +107,16 @@ class MLP(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
 
+
 class ActorPolicy(nn.Module):
-    def __init__(self, state_encoding: nn.ModuleDict, state_dim, act_dim, hidden_size: int, dropout: float=None):
+    def __init__(
+        self,
+        state_encoding: nn.Module,
+        state_dim: tuple[int, int, int],
+        act_dim: list[int],
+        hidden_size: int,
+        dropout: float | None = None
+    ):
         super().__init__()
         self.act_dim = act_dim
         self.h, self.w, self.state_c = state_dim
@@ -103,13 +134,35 @@ class ActorPolicy(nn.Module):
 
         self.register_buffer("mask_value", torch.tensor(-1e8))
 
-    def _sample(self, logits, masks):
-        return torch.searchsorted(self._probs(logits, masks).cumsum(dim=-1), torch.rand((logits.shape[:-1]), device=logits.device)[..., None])
-    
-    def _probs(self, logits, masks):
-        return torch.softmax(torch.where(masks.bool(), logits, self.mask_value), dim=-1)
+    def _sample(
+        self,
+        logits: torch.Tensor,
+        masks: torch.Tensor
+    ) -> torch.Tensor:
+        return torch.searchsorted(
+            self._probs(logits, masks).cumsum(dim=-1),
+            torch.rand((logits.shape[:-1]), device=logits.device)[..., None]
+        )
 
-    def forward(self, x, action_masks):
+    def _probs(
+        self,
+        logits: torch.Tensor,
+        masks: torch.Tensor
+    ) -> torch.Tensor:
+        return torch.softmax(
+            torch.where(
+                masks.bool(),
+                logits,
+                self.mask_value  # type: ignore
+            ),
+            dim=-1
+        )
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        action_masks: torch.Tensor
+    ) -> torch.Tensor:
         x = self.state_encoding(x)
         logits = self.mlp(x)
 
@@ -119,11 +172,14 @@ class ActorPolicy(nn.Module):
         action_masks = action_masks.reshape(-1, self.h * self.w, self.act_c)
         split_action_masks = torch.split(action_masks, self.act_dim, dim=-1)
 
-        action_probs = torch.cat([self._probs(logits, masks) for (logits, masks) in zip(split_logits, split_action_masks)], dim=-1)
+        action_probs = torch.cat([
+            self._probs(logits, masks) for (logits, masks)
+            in zip(split_logits, split_action_masks)
+        ], dim=-1)
         return action_probs.reshape((-1, self.h, self.w, self.act_c))
 
     @torch.no_grad()
-    def act(self, x, action_masks):
+    def act(self, x: torch.Tensor, action_masks: torch.Tensor) -> torch.Tensor:
         x = self.state_encoding(x)
         logits = self.mlp(x)
 
@@ -134,14 +190,24 @@ class ActorPolicy(nn.Module):
         split_action_masks = torch.split(action_masks, self.act_dim, dim=-1)
 
         return torch.cat([
-            (
-                self._sample(logits, masks).squeeze() * masks.any(dim=-1).squeeze().long()
-            ).unsqueeze(-1) for (logits, masks) in zip(split_logits, split_action_masks)
-        ],
-        dim=-1)
+                (
+                    self._sample(logits, masks).squeeze()
+                    * masks.any(dim=-1).squeeze().long()
+                ).unsqueeze(-1) for (logits, masks)
+                in zip(split_logits, split_action_masks)
+            ], dim=-1)
+
 
 class QFunction(nn.Module):
-    def __init__(self, state_encoding: nn.Module, action_encoding: nn.Module, mlp_layers: int = 1, hidden_dim: int = 256, dropout: Optional[float]=None, skip_connection: bool=False):
+    def __init__(
+        self,
+        state_encoding: nn.Module,
+        action_encoding: nn.Module,
+        mlp_layers: int = 1,
+        hidden_dim: int = 256,
+        dropout: float | None = None,
+        skip_connection: bool = False
+    ):
         super().__init__()
 
         self.skip_connection = skip_connection
@@ -150,19 +216,27 @@ class QFunction(nn.Module):
 
         self.mlps = []
         for _ in range(mlp_layers):
-            self.mlps.append(MLP(
-                    [hidden_dim * 2, hidden_dim * 2, hidden_dim * 2, hidden_dim * 2, hidden_dim * 2],
-                    dropout=dropout
-            ))
+            self.mlps.append(MLP([hidden_dim * 2] * 5, dropout=dropout))
         self.mlps = nn.ModuleList(self.mlps)
 
         self.out = MLP(
-            [hidden_dim * 2, hidden_dim * 2, hidden_dim * 2, hidden_dim * 2, hidden_dim, 1],
+            [
+                hidden_dim * 2,
+                hidden_dim * 2,
+                hidden_dim * 2,
+                hidden_dim * 2,
+                hidden_dim,
+                1
+            ],
             squeeze_output=True,
             dropout=dropout
         )
 
-    def forward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        state: torch.Tensor,
+        action: torch.Tensor
+    ) -> torch.Tensor:
         state = self.state_encoding(state)
         action = self.action_encoding(action)
         x = torch.cat([state, action], dim=-1)
@@ -177,25 +251,57 @@ class QFunction(nn.Module):
 
         return self.out(x)
 
+
 class TwinQ(nn.Module):
     def __init__(
-        self, state_encoding: nn.Module, action_encoding: nn.Module, mlp_layers: int = 3, skip_connection: bool = False, hidden_dim: int = 256
+        self,
+        state_encoding: nn.Module,
+        action_encoding: nn.Module,
+        mlp_layers: int = 3,
+        skip_connection: bool = False,
+        hidden_dim: int = 256
     ):
         super().__init__()
-        self.q1 = QFunction(state_encoding, action_encoding, mlp_layers, hidden_dim, skip_connection=skip_connection)
-        self.q2 = QFunction(state_encoding, action_encoding, mlp_layers, hidden_dim, skip_connection=skip_connection)
+        self.q1 = QFunction(
+            state_encoding,
+            action_encoding,
+            mlp_layers,
+            hidden_dim,
+            skip_connection=skip_connection
+        )
+        self.q2 = QFunction(
+            state_encoding,
+            action_encoding,
+            mlp_layers,
+            hidden_dim,
+            skip_connection=skip_connection
+        )
 
     def both(
-        self, state: torch.Tensor, action: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        self,
+        state: torch.Tensor,
+        action: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         return self.q1(state, action), self.q2(state, action)
 
-    def forward(self, state: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        state: torch.Tensor,
+        action: torch.Tensor
+    ) -> torch.Tensor:
         return torch.min(*self.both(state, action))
 
 
 class ValueFunction(nn.Module):
-    def __init__(self, state_encoding: nn.Module, mlp_layers: int = 1, hidden_dim: int = 256, dropout: Optional[float]=None, skip_connection: bool=False):
+    def __init__(
+        self,
+        state_encoding: nn.Module,
+        mlp_layers: int = 1,
+        hidden_dim: int = 256,
+        dropout: float | None = None,
+        skip_connection: bool = False
+    ):
+
         super().__init__()
         self.skip_connection = skip_connection
         self.state_encoding = state_encoding
@@ -207,15 +313,19 @@ class ValueFunction(nn.Module):
 
         self.mlps = []
         for _ in range(mlp_layers):
-            self.mlps.append(MLP(
-                    [hidden_dim * 2, hidden_dim * 2, hidden_dim * 2, hidden_dim * 2, hidden_dim * 2],
-                    dropout=dropout
-            ))
+            self.mlps.append(MLP([hidden_dim * 2] * 5, dropout=dropout))
 
         self.mlps = nn.ModuleList(self.mlps)
 
         self.out = MLP(
-            [hidden_dim * 2, hidden_dim * 2, hidden_dim * 2, hidden_dim * 2, hidden_dim, 1],
+            [
+                hidden_dim * 2,
+                hidden_dim * 2,
+                hidden_dim * 2,
+                hidden_dim * 2,
+                hidden_dim,
+                1
+            ],
             squeeze_output=True,
             dropout=dropout
         )
@@ -233,17 +343,51 @@ class ValueFunction(nn.Module):
             x = F.relu(x)
 
         return self.out(x)
-    
+
+
 class IQLNetwork():
-    def __init__(self, state_dim: List[int], action_dim: List[int], config: IQLModelConfig, device: Optional[torch.device] = None):
+    def __init__(
+        self,
+        state_dim: tuple[int, int, int],
+        action_dim: list[int],
+        config: IQLModelConfig,
+        device: torch.device
+    ):
         hidden_dim = config.hidden_dim
         dropout = config.dropout
 
-        a_state_encoding = SpatialEmbedding(state_dim[2], state_dim[0], state_dim[1], hidden_dim).to(device)
-        c_state_encoding = SpatialEmbedding(state_dim[2], state_dim[0], state_dim[1], hidden_dim).to(device)
-        v_state_encoding = SpatialEmbedding(state_dim[2], state_dim[0], state_dim[1], hidden_dim).to(device)
-        action_encoding = SpatialEmbedding(sum(action_dim), state_dim[0], state_dim[1], hidden_dim).to(device)
+        a_state_encoding = SpatialEmbedding(
+            state_dim[2], state_dim[0], state_dim[1], hidden_dim
+        ).to(device)
+        c_state_encoding = SpatialEmbedding(
+            state_dim[2], state_dim[0], state_dim[1], hidden_dim
+        ).to(device)
+        v_state_encoding = SpatialEmbedding(
+            state_dim[2], state_dim[0], state_dim[1], hidden_dim
+        ).to(device)
+        action_encoding = SpatialEmbedding(
+            sum(action_dim), state_dim[0], state_dim[1], hidden_dim
+        ).to(device)
 
-        self.actor = ActorPolicy(a_state_encoding, state_dim, action_dim, hidden_dim, dropout=dropout).to(device)
-        self.critic = TwinQ(c_state_encoding, action_encoding, mlp_layers=1, skip_connection=False, hidden_dim=hidden_dim).to(device)
-        self.value = ValueFunction(v_state_encoding, mlp_layers=1, skip_connection=False, hidden_dim=hidden_dim).to(device)
+        self.actor = ActorPolicy(
+            a_state_encoding,
+            state_dim,
+            action_dim,
+            hidden_dim,
+            dropout=dropout
+        ).to(device)
+
+        self.critic = TwinQ(
+            c_state_encoding,
+            action_encoding,
+            mlp_layers=1,
+            skip_connection=False,
+            hidden_dim=hidden_dim
+        ).to(device)
+
+        self.value = ValueFunction(
+            v_state_encoding,
+            mlp_layers=1,
+            skip_connection=False,
+            hidden_dim=hidden_dim
+        ).to(device)
