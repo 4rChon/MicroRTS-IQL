@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "iql-docker"
+version = "0.1.0"
+description = ""
+authors = ["Benjamin Bugeja"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "<2"
+lmdb = "^1.5.1"
+gym-microrts = {path = "./lib/gym_microrts", develop = true}
+wandb = "^0.20.1"
+
+[tool.poetry.group.torch.dependencies]
+torch = {version = "^2.7.1+cu128", source = "pytorch-gpu-src"}
+
+[[tool.poetry.source]]
+name = "pytorch-gpu-src"
+url = "https://download.pytorch.org/whl/cu128"
+priority = "explicit"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

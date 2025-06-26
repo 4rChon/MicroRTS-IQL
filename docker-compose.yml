@@ -1,0 +1,26 @@
+services:
+  iql-training:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bbugeja95/microrts-agents:iql_latest
+    container_name: iql-training-container
+    runtime: nvidia
+    environment:
+      - WANDB_API_KEY=${WANDB_API_KEY}
+    env_file:
+      - .env
+    volumes:
+      - ../data:/data
+      - ../config:/app/config
+      - ../results:/app/_exp
+    working_dir: /app/
+    command: python src/main.py --note docker-compose-gpu-training --config config/hyperparams_iql.yaml
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    network_mode: host
