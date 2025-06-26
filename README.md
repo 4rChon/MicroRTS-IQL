@@ -139,6 +139,6 @@ This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENS
 
 ## Acknowledgments
 
-- Original IQL implementation: [IQL-PyTorch](https://github.com/gwthomas/IQL-PyTorch)
+- CORL IQL implementation: [CORL](https://github.com/corl-team/CORL/blob/main/algorithms/offline/iql.py)
 - MicroRTS environment: [gym-microrts](https://github.com/Farama-Foundation/MicroRTS-Py)
 - IQL paper: [Implicit Q-Learning](https://arxiv.org/pdf/2110.06169.pdf)
