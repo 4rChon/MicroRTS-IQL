@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "iql-docker"
+name = "iql-microrts"
 version = "0.1.0"
 description = ""
-authors = ["Benjamin Bugeja"]
+authors = ["Benjamin Bugeja <bendbug@gmail.com>"]
 readme = "README.md"
 package-mode = false
 
@@ -10,8 +10,10 @@ package-mode = false
 python = "^3.11"
 numpy = "<2"
 lmdb = "^1.5.1"
-gym-microrts = {path = "./lib/gym_microrts", develop = true}
 wandb = "^0.20.1"
+pillow = "^11.2.1"
+gym-microrts = {path = "lib/gym_microrts", develop = true}
+pyrallis = "^0.3.1"
 
 [tool.poetry.group.torch.dependencies]
 torch = {version = "^2.7.1+cu128", source = "pytorch-gpu-src"}

@@ -140,8 +140,11 @@ class ImplicitQLearning:
             * next_v.detach()
 
         qs = self.qf.both(observations, actions)
+        # q_loss = sum(
+        #     F.mse_loss(q, targets, reduction="sum") for q in qs
+        # ) / len(qs)
         q_loss = sum(
-            F.mse_loss(q, targets, reduction="sum") for q in qs
+            F.mse_loss(q, targets) for q in qs
         ) / len(qs)
         # q_loss = sum(F.mse_loss(q, targets) for q in qs) / len(qs)
         self.q_optimizer.zero_grad()
@@ -248,28 +251,25 @@ def train(config: TrainConfig, save_path: Path):
     print(f"Replay buffer size: {len(replay_buffer)}")
 
     iql_network = IQLNetwork(
-        state_dim=state_dim,
-        action_dim=action_dim,
-        config=config.iql.model,
-        device=config.device,
+        state_dim, action_dim, config.iql.model, config.device,
     )
 
     q_network = iql_network.critic
     v_network = iql_network.value
     actor = iql_network.actor
 
-    v_optimizer = torch.optim.Adam(
-        v_network.parameters(), lr=config.iql.training.vf_lr
+    v_optimizer = torch.optim.AdamW(
+        v_network.parameters(), lr=config.iql.training.vf_lr, fused=True
     )
-    q_optimizer = torch.optim.Adam(
-        q_network.parameters(), lr=config.iql.training.qf_lr
+    q_optimizer = torch.optim.AdamW(
+        q_network.parameters(), lr=config.iql.training.qf_lr, fused=True
     )
-    actor_optimizer = torch.optim.Adam(
-        actor.parameters(), lr=config.iql.training.actor_lr
+    actor_optimizer = torch.optim.AdamW(
+        actor.parameters(), lr=config.iql.training.actor_lr, fused=True
     )
 
     print("---------------------------------------")
-    print(f"Training IQL, Env: GymMicroRTS, Seed: {seed}")
+    print(f"Training IQL, Env: Gym-MicroRTS, Seed: {seed}")
     print("---------------------------------------")
 
     # Initialize actor
@@ -311,7 +311,7 @@ def train(config: TrainConfig, save_path: Path):
             print(f"Saving model at step {trainer.total_steps} to {save_path}")
             torch.save(
                 trainer.state_dict(),
-                f"{save_path}/model_{trainer.total_steps}.pth"
+                f"{save_path}/model_{trainer.total_steps}.pt"
             )
 
             eval_score = eval_actor(

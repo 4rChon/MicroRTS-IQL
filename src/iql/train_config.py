@@ -30,7 +30,8 @@ class DataConfig:
 
 @dataclass
 class IQLModelConfig:
-    hidden_dim: int = 256
+    hidden_dim: int = 32
+    hidden_layers: int = 2
     dropout: float = 0.1
     load: bool = False
     load_path: str = "model/model.pt"
@@ -48,7 +49,6 @@ class IQLTrainingConfig:
     qf_lr: float = 3e-4
     actor_lr: float = 3e-4
     batch_size: int = 64
-    buffer_size: int = 3000
     reward_scale: float = 1.0
 
 

@@ -68,7 +68,7 @@ class TransitionSet():
 
     def _open_lmdb(self) -> lmdb.Environment:
         self._lmdb_env = lmdb.open(
-            self._lmdb_path,
+            str(self._lmdb_path),
             map_size=self._map_size_gb * 1024 ** 3,
             readonly=True,
             lock=False,

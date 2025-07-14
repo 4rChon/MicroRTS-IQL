@@ -58,8 +58,11 @@ docker build -t iql-microrts .
 
 2. **Run with Docker Compose:**
 ```bash
-# Set your Wandb API key in .env file
-echo "WANDB_API_KEY=your_wandb_key_here" > .env
+# Create .env file with required environment variables
+echo "WANDB_API_KEY=your_wandb_api_key_here" > .env
+echo "HTTPS_PROXY=your_https_proxy_url" >> .env
+```
+
 
 # Run training
 docker-compose up
@@ -124,7 +127,6 @@ iql:
     qf_lr: 3e-4
     actor_lr: 3e-4
     batch_size: 64
-    buffer_size: 3000
     reward_scale: 1.0
   
   eval:

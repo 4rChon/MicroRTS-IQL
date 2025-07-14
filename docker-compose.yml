@@ -8,6 +8,7 @@ services:
     runtime: nvidia
     environment:
       - WANDB_API_KEY=${WANDB_API_KEY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
     env_file:
       - .env
     volumes:

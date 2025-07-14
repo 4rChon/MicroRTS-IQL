@@ -203,7 +203,7 @@ class QFunction(nn.Module):
         self,
         state_encoding: nn.Module,
         action_encoding: nn.Module,
-        mlp_layers: int = 1,
+        hidden_layers: int = 1,
         hidden_dim: int = 256,
         dropout: float | None = None,
         skip_connection: bool = False
@@ -215,15 +215,13 @@ class QFunction(nn.Module):
         self.action_encoding = action_encoding
 
         self.mlps = []
-        for _ in range(mlp_layers):
-            self.mlps.append(MLP([hidden_dim * 2] * 5, dropout=dropout))
+        for _ in range(hidden_layers):
+            self.mlps.append(MLP([hidden_dim * 2, hidden_dim * 2],
+                                 dropout=dropout))
         self.mlps = nn.ModuleList(self.mlps)
 
         self.out = MLP(
             [
-                hidden_dim * 2,
-                hidden_dim * 2,
-                hidden_dim * 2,
                 hidden_dim * 2,
                 hidden_dim,
                 1
@@ -257,22 +255,22 @@ class TwinQ(nn.Module):
         self,
         state_encoding: nn.Module,
         action_encoding: nn.Module,
-        mlp_layers: int = 3,
+        hidden_layers: int = 3,
+        hidden_dim: int = 256,
         skip_connection: bool = False,
-        hidden_dim: int = 256
     ):
         super().__init__()
         self.q1 = QFunction(
             state_encoding,
             action_encoding,
-            mlp_layers,
+            hidden_layers,
             hidden_dim,
             skip_connection=skip_connection
         )
         self.q2 = QFunction(
             state_encoding,
             action_encoding,
-            mlp_layers,
+            hidden_layers,
             hidden_dim,
             skip_connection=skip_connection
         )
@@ -296,7 +294,7 @@ class ValueFunction(nn.Module):
     def __init__(
         self,
         state_encoding: nn.Module,
-        mlp_layers: int = 1,
+        hidden_layers: int = 1,
         hidden_dim: int = 256,
         dropout: float | None = None,
         skip_connection: bool = False
@@ -312,16 +310,14 @@ class ValueFunction(nn.Module):
         )
 
         self.mlps = []
-        for _ in range(mlp_layers):
-            self.mlps.append(MLP([hidden_dim * 2] * 5, dropout=dropout))
+        for _ in range(hidden_layers):
+            self.mlps.append(MLP([hidden_dim * 2, hidden_dim * 2],
+                                 dropout=dropout))
 
         self.mlps = nn.ModuleList(self.mlps)
 
         self.out = MLP(
             [
-                hidden_dim * 2,
-                hidden_dim * 2,
-                hidden_dim * 2,
                 hidden_dim * 2,
                 hidden_dim,
                 1
@@ -353,6 +349,7 @@ class IQLNetwork():
         config: IQLModelConfig,
         device: torch.device
     ):
+        hidden_layers = config.hidden_layers
         hidden_dim = config.hidden_dim
         dropout = config.dropout
 
@@ -380,14 +377,14 @@ class IQLNetwork():
         self.critic = TwinQ(
             c_state_encoding,
             action_encoding,
-            mlp_layers=1,
+            hidden_layers,
+            hidden_dim,
             skip_connection=False,
-            hidden_dim=hidden_dim
         ).to(device)
 
         self.value = ValueFunction(
             v_state_encoding,
-            mlp_layers=1,
+            hidden_layers,
+            hidden_dim,
             skip_connection=False,
-            hidden_dim=hidden_dim
         ).to(device)
