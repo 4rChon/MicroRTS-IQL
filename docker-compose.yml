@@ -16,7 +16,7 @@ services:
       - ../config:/app/config
       - ../results:/app/_exp
     working_dir: /app/
-    command: python src/main.py --note docker-compose-gpu-training --config config/hyperparams_iql.yaml
+    command: ${DOCKER_COMMAND}
     deploy:
       resources:
         reservations:

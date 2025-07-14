@@ -105,7 +105,7 @@ environment:
   episode_steps_max: 2000
 
 data:
-  buffer_path: "data/8x8/1v1/replay_buffer_3k"
+  buffer_path: "data/8x8/1v1/replay_buffer_3k_pristine"
   save_interval: 10000
   log_interval: 10
 

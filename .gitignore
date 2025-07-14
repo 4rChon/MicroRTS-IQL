@@ -196,3 +196,6 @@ cython_debug/
 wandb
 _exp
 data
+config
+entrpoint.py
+running_agent.py

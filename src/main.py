@@ -1,39 +1,24 @@
-import argparse
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 
 import pyrallis
 import torch
-import wandb
 
+import wandb
 from iql.train import train
 from iql.train_config import TrainConfig
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--note",
-        type=str,
-        default="",
-        help="Note for the experiment",
-        required=True
-    )
-    parser.add_argument(
-        "--config",
-        type=str,
-        default="../config/hyperparams_iql.yaml",
-        help="Path to the hyperparameters YAML file"
-    )
+pyrallis.decode.register(  # type: ignore
+    torch.device,
+    lambda x: torch.device(x) if x else torch.device("cuda")
+)
 
-    args = parser.parse_args()
-    pyrallis.decode.register(  # type: ignore
-        torch.device,
-        lambda x: torch.device(x) if x else torch.device("cuda")
-    )
-    config = pyrallis.parse(  # type: ignore
-        config_class=TrainConfig, config_path=args.config
-    )
+
+@pyrallis.wrap()  # type: ignore
+def main(config: TrainConfig):
+    if not config.note:
+        raise ValueError("Please provide a note for the experiment.")
 
     time = datetime.now().strftime("%H_%M_%S")
     date = datetime.now().strftime("%Y_%m_%d")
@@ -58,3 +43,7 @@ if __name__ == "__main__":
     train(config, experiment_dir)
 
     wandb.finish()
+
+
+if __name__ == "__main__":
+    main()  # type: ignore

@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import torch
 
@@ -77,16 +76,3 @@ class TrainConfig:
     environment: EnvConfig = field(default_factory=EnvConfig)
     data: DataConfig = field(default_factory=DataConfig)
     iql: IQLConfig = field(default_factory=IQLConfig)
-
-    @classmethod
-    def from_dict(cls, config_dict: dict[str, Any]) -> 'TrainConfig':
-        config_dict['eval'] = EvalConfig(**config_dict['eval'])
-        config_dict['environment'] = EnvConfig(**config_dict['environment'])
-        config_dict['data'] = DataConfig(**config_dict['data'])
-        iql_dict = config_dict['iql']
-        iql_dict['model'] = IQLModelConfig(**iql_dict['model'])
-        iql_dict['training'] = IQLTrainingConfig(**iql_dict['training'])
-        iql_dict['eval'] = IQLEvalConfig(**iql_dict['eval'])
-        config_dict['iql'] = IQLConfig(**iql_dict)
-
-        return cls(**config_dict)
