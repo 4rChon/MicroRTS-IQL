@@ -1,57 +1,92 @@
 import pickle
 from pathlib import Path
-from typing import Any
 
 import lmdb
-import numpy as np
+import torch
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
 
 TransitionSetSample = tuple[
-    np.ndarray[Any, np.dtype[np.int32]],  # states
-    np.ndarray[Any, np.dtype[np.int32]],  # actions
-    np.ndarray[Any, np.dtype[np.int32]],  # action_masks
-    np.ndarray[Any, np.dtype[np.float32]],  # rewards
-    np.ndarray[Any, np.dtype[np.int32]],  # next_states
-    np.ndarray[Any, np.dtype[np.bool_]],    # dones
+    torch.Tensor,  # states
+    torch.Tensor,  # next states
+    torch.Tensor,  # actions
+    torch.Tensor,  # next_actions
+    torch.Tensor,  # rewards
+    torch.Tensor,  # dones
+    torch.Tensor,  # action_masks
+    torch.Tensor,  # next_action_masks
 ]
 
 
-class TransitionSet():
+PACKED_ACTION_DIMS = [6, 10, 14, 18, 22, 29]
+STATE_DIMS = [5, 5, 3, 8, 6, 2]
+ACTION_DIMS = [6, 4, 4, 4, 4, 7, 49]
+
+
+def vectorised_packed_state_to_obs(
+    packed_state: torch.Tensor, H: int, W: int
+) -> torch.Tensor:
+    one_hots = []
+    for i, dim in enumerate(STATE_DIMS):
+        oh = F.one_hot(packed_state[:, i], num_classes=dim)
+        one_hots.append(oh)
+
+    cat_oh = torch.cat(one_hots, dim=-1)
+    return cat_oh.float().view(H, W, -1)
+
+
+def vectorised_packed_action_to_action(
+    packed_action: torch.Tensor, H: int, W: int
+) -> torch.Tensor:
+    action = torch.zeros((
+        H * W, sum(ACTION_DIMS)
+    ), dtype=torch.long)
+    for i, grid_action in enumerate(packed_action):
+        action_type = grid_action[0]
+        if action_type == 0:
+            continue
+
+        action[i][action_type] = 1
+        if action_type >= 4:
+            action[i][
+                PACKED_ACTION_DIMS[action_type] +
+                grid_action[action_type + 1]
+            ] = 1
+
+        if action_type != 5:
+            action[i][
+                PACKED_ACTION_DIMS[action_type - 1] +
+                grid_action[action_type]
+            ] = 1
+
+    return action.float().reshape(
+        H, W, sum(ACTION_DIMS)
+    )
+
+
+class TransitionSet(Dataset):
     def __init__(
         self,
         path: Path,
+        state_dim: tuple[int, int, int],
+        action_dim: list[int],
         map_size_gb: int = 25,
+        reward_scale: float = 1.0
     ):
         self.metadata = None
 
         self._lmdb_path = path
         self._map_size_gb = map_size_gb
-        self._chunk_pointer = -1
-        self._idx_pointer = 0
-        self._states = None
-        self._actions = None
-        self._action_masks = None
-        self._rewards = None
-        self._next_states = None
-        self._dones = None
         self._worker_id = 0
         self._lmdb_env = None
-
-    # chunk_size getter
-    @property
-    def chunk_size(self) -> int:
-        if self.metadata is None:
-            return 0
-        return self.metadata["chunk_size"]
+        self._reward_scale: float = reward_scale
+        self._state_dim = state_dim
+        self._action_dim = action_dim
+        self.length = -1
 
     @property
     def size(self) -> int:
-        if self.metadata is None:
-            return -1
-        return self.metadata["size"]
-
-    @property
-    def chunk_count(self) -> int:
-        return self.__len__() // self.chunk_size
+        return self.length
 
     @property
     def lmdb_env(self) -> lmdb.Environment:
@@ -59,12 +94,40 @@ class TransitionSet():
             return self._open_lmdb()
         return self._lmdb_env
 
-    def init_lmdb(self, worker_id: int = 0) -> None:
-        print("Initializing LMDB environment for worker", worker_id)
-        self._open_lmdb()
-        self._init_metrics()
+    def __len__(self):
+        if self.size == -1 and self._lmdb_env is None:
+            self._open_lmdb()
+            self._init_metrics()
+            self._lmdb_env = None
 
-        self._worker_id = worker_id
+        return self.size
+
+    def __getitem__(self, idx: int) -> TransitionSetSample:
+        with self.lmdb_env.begin(write=False, buffers=True) as txn:
+            data = txn.get(f"{idx}".encode("ascii"))
+            if data is None:
+                raise ValueError(
+                    f"Idx {idx} not found in LMDB. Please ensure "
+                    "the chunk exists."
+                )
+            transition = pickle.loads(data)  # type: ignore
+
+            h, w, _ = self._state_dim
+            act_c = sum(self._action_dim)
+
+            transition = [
+                torch.tensor(b)
+                for b in transition
+            ]
+            s, ns, a, na, r, d, am, nam = transition
+            am = am.reshape(-1, h, w, act_c)
+            nam = nam.reshape(-1, h, w, act_c)
+            s = vectorised_packed_state_to_obs(s, h, w)
+            ns = vectorised_packed_state_to_obs(ns, h, w)
+            a = vectorised_packed_action_to_action(a, h, w)
+            na = vectorised_packed_action_to_action(na, h, w)
+
+            return s, ns, a, na, r * self._reward_scale, d, am, nam
 
     def _open_lmdb(self) -> lmdb.Environment:
         self._lmdb_env = lmdb.open(
@@ -78,6 +141,8 @@ class TransitionSet():
             sync=False,
         )
 
+        if self._lmdb_env is None:
+            raise ValueError("Failed to open LMDB environment.")
         return self._lmdb_env
 
     def _init_metrics(self) -> None:
@@ -91,62 +156,33 @@ class TransitionSet():
             self.metadata = pickle.loads(data)  # type: ignore
             print(f"LMDB metadata: {self.metadata}")
 
-    def _load_chunk(self, chunk_idx: int) -> None:
-        with self.lmdb_env.begin(write=False, buffers=True) as txn:
-            print(
-                f"Worker ID: {self._worker_id} loading chunk {chunk_idx} from\
-                lmdb"
-            )
-            data = txn.get(f"{chunk_idx}".encode("ascii"))
-            if data is None:
-                raise ValueError(
-                    f"Chunk {chunk_idx} not found in LMDB. Please ensure "
-                    "the chunk exists."
-                )
-            (
-                self._states,
-                self._actions,
-                self._action_masks,
-                self._rewards,
-                self._next_states,
-                self._dones
-            ) = pickle.loads(data)  # type: ignore
+            self.length = txn.stat()["entries"]  # type: ignore
 
-    def __len__(self):
-        if self.size == -1 and self._lmdb_env is None:
-            self._open_lmdb()
-            self._init_metrics()
-            self._lmdb_env = None
+    def init_lmdb(self, worker_id: int = 0) -> None:
+        print("Initializing LMDB environment for worker", worker_id)
+        self._open_lmdb()
+        self._init_metrics()
 
-        return self.size
-
-    def sample_next(
-        self, batch_size: int, reward_scale: float = 1.0
-    ) -> TransitionSetSample:
-        chunk_idx = (self._idx_pointer // self.chunk_size) % self.chunk_count
-        chunk_idx_within = self._idx_pointer % self.chunk_size
-        from_idx = chunk_idx_within
-        to_idx = min(chunk_idx_within + batch_size, self.chunk_size)
-
-        if to_idx - from_idx < batch_size:
-            self._idx_pointer += batch_size - (to_idx - from_idx)
-            self._idx_pointer %= self.__len__()
-            return self.sample_next(batch_size)
-
-        if chunk_idx != self._chunk_pointer:
-            self._load_chunk(chunk_idx)
-            self._chunk_pointer = chunk_idx % self.chunk_count
-
-        self._idx_pointer += batch_size
-        self._idx_pointer %= self.__len__()
-        return (
-            self._states[from_idx:to_idx],  # type: ignore
-            self._actions[from_idx:to_idx],  # type: ignore
-            self._action_masks[from_idx:to_idx],  # type: ignore
-            self._rewards[from_idx:to_idx] * reward_scale,  # type: ignore
-            self._next_states[from_idx:to_idx],  # type: ignore
-            self._dones[from_idx:to_idx]  # type: ignore
-        )
+        self._worker_id = worker_id
 
     def close(self):
         self.lmdb_env.close()
+
+
+class TransitionDataLoader(DataLoader):
+    def __init__(
+        self,
+        transition_set: TransitionSet,
+        batch_size,
+        num_workers
+    ):
+        self.transition_set = transition_set
+        super().__init__(
+            dataset=transition_set,
+            batch_size=batch_size,
+            num_workers=num_workers,
+            persistent_workers=num_workers > 0,
+            shuffle=True,
+            worker_init_fn=transition_set.init_lmdb,
+            pin_memory=True,
+        )

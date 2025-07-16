@@ -2,6 +2,7 @@
 # https://arxiv.org/pdf/2110.06169.pdf
 import copy
 from pathlib import Path
+from time import time
 from typing import Any
 
 import gym_microrts
@@ -17,7 +18,7 @@ import wandb
 from env_utils import get_env_spec, make_eval_env, sample_maps
 from iql.iql_model import ActorPolicy, IQLNetwork, TwinQ, ValueFunction
 from iql.train_config import IQLTrainingConfig, TrainConfig
-from iql.transition_set import TransitionSet
+from iql.transition_set import TransitionDataLoader, TransitionSet
 from utils import set_seed_everywhere
 
 TensorBatch = list[torch.Tensor]
@@ -98,10 +99,8 @@ class ImplicitQLearning:
             self.actor_optimizer,
             max_lr=actor_optimizer.param_groups[0]["lr"],
             total_steps=config.max_timesteps,
-            pct_start=0.45
+            pct_start=config.warmup_pct
         )
-        # self.actor_lr_schedule =
-        # CosineAnnealingLR(self.actor_optimizer, max_steps)
 
         self.total_steps = 0
         self.device = device
@@ -140,13 +139,9 @@ class ImplicitQLearning:
             * next_v.detach()
 
         qs = self.qf.both(observations, actions)
-        # q_loss = sum(
-        #     F.mse_loss(q, targets, reduction="sum") for q in qs
-        # ) / len(qs)
         q_loss = sum(
             F.mse_loss(q, targets) for q in qs
         ) / len(qs)
-        # q_loss = sum(F.mse_loss(q, targets) for q in qs) / len(qs)
         self.q_optimizer.zero_grad()
         q_loss.backward()  # type: ignore
         self.q_optimizer.step()
@@ -188,11 +183,13 @@ class ImplicitQLearning:
     def train(self, batch: TensorBatch) -> dict[str, Any]:
         (
             observations,
-            actions,
-            action_masks,
-            rewards,
             next_observations,
+            actions,
+            next_actions,
+            rewards,
             dones,
+            action_masks,
+            next_action_masks,
         ) = batch
         log_dict: dict[Any, str] = {}
 
@@ -245,7 +242,15 @@ def train(config: TrainConfig, save_path: Path):
 
     replay_buffer = TransitionSet(
         config.data.buffer_path,
-        map_size_gb=150,
+        map_size_gb=180,
+        state_dim=state_dim,
+        action_dim=action_dim,
+    )
+
+    dataloader = TransitionDataLoader(
+        replay_buffer,
+        batch_size=config.iql.training.batch_size,
+        num_workers=config.data.num_workers,
     )
 
     print(f"Replay buffer size: {len(replay_buffer)}")
@@ -293,18 +298,23 @@ def train(config: TrainConfig, save_path: Path):
         ais=[gym_microrts.microrts_ai.coacAI]
     )
 
+    batch_loader = iter(dataloader)
+    step_time = 0
+    total_time = time()
     for step in range(int(config.iql.training.max_timesteps)):
-        batch = replay_buffer.sample_next(
-            batch_size=config.iql.training.batch_size,
-            reward_scale=config.iql.training.reward_scale
-        )
+        step_start_time = time()
+        batch = next(batch_loader)
         batch = [
             torch.tensor(b, dtype=torch.float32, device=config.device)
             for b in batch
         ]
         log_dict = trainer.train(batch)
+        step_time += time() - step_start_time
 
         if (step + 1) % config.data.log_interval == 0:
+            log_dict["step_time"] = step_time / config.data.log_interval
+            log_dict["total_time"] = (time() - total_time)
+            step_time = 0
             wandb.log(log_dict, step=trainer.total_steps)
             print(f"Training step: {trainer.total_steps}")
         if (step + 1) % config.data.save_interval == 0:

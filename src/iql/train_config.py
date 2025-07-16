@@ -22,9 +22,10 @@ class EnvConfig:
 
 @dataclass
 class DataConfig:
-    buffer_path: Path = Path("data/8x8/1v1/replay_buffer_3k")
+    buffer_path: Path = Path("data/8x8/1v1/replay_buffer_3k_pristine")
     save_interval: int = 10000
     log_interval: int = 10
+    num_workers: int = 12
 
 
 @dataclass
@@ -49,6 +50,7 @@ class IQLTrainingConfig:
     actor_lr: float = 3e-4
     batch_size: int = 64
     reward_scale: float = 1.0
+    warmup_pct: float = 0.45
 
 
 @dataclass
