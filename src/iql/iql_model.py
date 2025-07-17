@@ -349,6 +349,7 @@ class IQLNetwork():
         config: IQLModelConfig,
         device: torch.device
     ):
+        print("Initializing IQLNetwork...")
         hidden_layers = config.hidden_layers
         hidden_dim = config.hidden_dim
         dropout = config.dropout

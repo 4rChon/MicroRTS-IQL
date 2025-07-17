@@ -73,6 +73,7 @@ class TransitionSet(Dataset):
         map_size_gb: int = 25,
         reward_scale: float = 1.0
     ):
+        print("Initializing TransitionSet with path:", path)
         self.metadata = None
 
         self._lmdb_path = path
@@ -120,14 +121,23 @@ class TransitionSet(Dataset):
                 for b in transition
             ]
             s, ns, a, na, r, d, am, nam = transition
-            am = am.reshape(-1, h, w, act_c)
-            nam = nam.reshape(-1, h, w, act_c)
-            s = vectorised_packed_state_to_obs(s, h, w)
-            ns = vectorised_packed_state_to_obs(ns, h, w)
-            a = vectorised_packed_action_to_action(a, h, w)
-            na = vectorised_packed_action_to_action(na, h, w)
+            am = am.reshape(h, w, act_c).float()
+            nam = nam.reshape(h, w, act_c).float()
+            s = vectorised_packed_state_to_obs(s.long(), h, w)
+            ns = vectorised_packed_state_to_obs(ns.long(), h, w)
+            a = vectorised_packed_action_to_action(a.long(), h, w)
+            na = vectorised_packed_action_to_action(na.long(), h, w)
 
-            return s, ns, a, na, r * self._reward_scale, d, am, nam
+            return (
+                s,                               # states
+                ns,                              # next states
+                a,                               # actions
+                na,                              # next actions
+                r.float() * self._reward_scale,  # rewards
+                d.float(),                       # dones
+                am,                              # action masks
+                nam                              # next action masks
+            )
 
     def _open_lmdb(self) -> lmdb.Environment:
         self._lmdb_env = lmdb.open(
@@ -154,7 +164,6 @@ class TransitionSet(Dataset):
                     "environment is properly initialized."
                 )
             self.metadata = pickle.loads(data)  # type: ignore
-            print(f"LMDB metadata: {self.metadata}")
 
             self.length = txn.stat()["entries"]  # type: ignore
 
@@ -176,6 +185,8 @@ class TransitionDataLoader(DataLoader):
         batch_size,
         num_workers
     ):
+        print(f"Creating TransitionDataLoader with batch size: {batch_size} \
+              and num workers: {num_workers}")
         self.transition_set = transition_set
         super().__init__(
             dataset=transition_set,

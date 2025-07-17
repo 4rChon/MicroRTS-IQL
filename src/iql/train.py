@@ -83,6 +83,7 @@ class ImplicitQLearning:
         config: IQLTrainingConfig,
         device: torch.device,
     ):
+        print("Initializing IQL Trainer...")
         self.iql_tau = config.iql_tau
         self.beta = config.beta
         self.discount = config.discount
@@ -235,7 +236,6 @@ class ImplicitQLearning:
 def train(config: TrainConfig, save_path: Path):
     seed = config.seed
     set_seed_everywhere(seed)
-
     state_dim, action_dim, _ = get_env_spec(
         config.environment.episode_steps_max
     )
@@ -305,7 +305,7 @@ def train(config: TrainConfig, save_path: Path):
         step_start_time = time()
         batch = next(batch_loader)
         batch = [
-            torch.tensor(b, dtype=torch.float32, device=config.device)
+            b.to(config.device, non_blocking=True)
             for b in batch
         ]
         log_dict = trainer.train(batch)
