@@ -186,11 +186,9 @@ class ImplicitQLearning:
             observations,
             next_observations,
             actions,
-            next_actions,
             rewards,
             dones,
             action_masks,
-            next_action_masks,
         ) = batch
         log_dict: dict[Any, str] = {}
 
@@ -242,7 +240,7 @@ def train(config: TrainConfig, save_path: Path):
 
     replay_buffer = TransitionSet(
         config.data.buffer_path,
-        map_size_gb=180,
+        map_size_gb=200,
         state_dim=state_dim,
         action_dim=action_dim,
     )

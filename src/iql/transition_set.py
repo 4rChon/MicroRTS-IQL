@@ -10,11 +10,11 @@ TransitionSetSample = tuple[
     torch.Tensor,  # states
     torch.Tensor,  # next states
     torch.Tensor,  # actions
-    torch.Tensor,  # next_actions
+    # torch.Tensor,  # next_actions
     torch.Tensor,  # rewards
     torch.Tensor,  # dones
     torch.Tensor,  # action_masks
-    torch.Tensor,  # next_action_masks
+    # torch.Tensor,  # next_action_masks
 ]
 
 
@@ -120,23 +120,19 @@ class TransitionSet(Dataset):
                 torch.tensor(b)
                 for b in transition
             ]
-            s, ns, a, na, r, d, am, nam = transition
+            s, ns, a, _, r, d, am, _ = transition
             am = am.reshape(h, w, act_c).float()
-            nam = nam.reshape(h, w, act_c).float()
             s = vectorised_packed_state_to_obs(s.long(), h, w)
             ns = vectorised_packed_state_to_obs(ns.long(), h, w)
             a = vectorised_packed_action_to_action(a.long(), h, w)
-            na = vectorised_packed_action_to_action(na.long(), h, w)
 
             return (
                 s,                               # states
                 ns,                              # next states
                 a,                               # actions
-                na,                              # next actions
                 r.float() * self._reward_scale,  # rewards
                 d.float(),                       # dones
                 am,                              # action masks
-                nam                              # next action masks
             )
 
     def _open_lmdb(self) -> lmdb.Environment:

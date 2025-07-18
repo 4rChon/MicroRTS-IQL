@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from datetime import datetime
+import os
 from pathlib import Path
 
 import pyrallis
@@ -22,27 +23,25 @@ def main(config: TrainConfig):
 
     time = datetime.now().strftime("%H_%M_%S")
     date = datetime.now().strftime("%Y_%m_%d")
-    config.environment.name = f"{config.environment.name}_{time}"
-    prefix = Path(f"{config.environment.save_dir}/{config.environment.group}")
-
+    id = wandb.util.generate_id()  # type: ignore
     experiment_dir = Path(
-        f"{prefix}/{date}/{config.environment.name}"
+        f"{config.environment.save_dir}/{config.environment.group}/{date}/{id}"
     )
 
-    wandb.init(
-        config=asdict(config),
+    with wandb.init(
         project=config.environment.project,
         group=config.environment.group,
         notes=config.note,
         dir=experiment_dir,
-        name=config.environment.name,
-    )
+        id=id,
+    ) as run:
+        run.name = f"{config.environment.group}-{run.name} [{date} {time}]"
+        config.environment.name = run.name  # type: ignore
+        run.config.update(asdict(config), allow_val_change=True)
 
-    wandb.save("hyperparams.yaml")
+        wandb.save(os.path.join(experiment_dir, "*.pt"))
 
-    train(config, experiment_dir)
-
-    wandb.finish()
+        train(config, experiment_dir)
 
 
 if __name__ == "__main__":
