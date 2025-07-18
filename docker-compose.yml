@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: bbugeja95/microrts-agents:iql_latest
-    container_name: iql-training-container
+    ipc: host
     runtime: nvidia
     environment:
       - WANDB_API_KEY=${WANDB_API_KEY}

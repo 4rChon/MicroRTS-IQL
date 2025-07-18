@@ -109,7 +109,7 @@ class TransitionSet(Dataset):
             if data is None:
                 raise ValueError(
                     f"Idx {idx} not found in LMDB. Please ensure "
-                    "the chunk exists."
+                    "the key exists."
                 )
             transition = pickle.loads(data)  # type: ignore
 
@@ -161,7 +161,7 @@ class TransitionSet(Dataset):
                 )
             self.metadata = pickle.loads(data)  # type: ignore
 
-            self.length = txn.stat()["entries"]  # type: ignore
+            self.length = self.metadata["num_transitions"]  # type: ignore
 
     def init_lmdb(self, worker_id: int = 0) -> None:
         print("Initializing LMDB environment for worker", worker_id)
