@@ -249,6 +249,7 @@ def train(config: TrainConfig, save_path: Path):
         replay_buffer,
         batch_size=config.iql.training.batch_size,
         num_workers=config.data.num_workers,
+        num_samples=config.iql.training.max_timesteps
     )
 
     print(f"Replay buffer size: {len(replay_buffer)}")
@@ -296,12 +297,10 @@ def train(config: TrainConfig, save_path: Path):
         ais=[gym_microrts.microrts_ai.coacAI]
     )
 
-    batch_loader = iter(dataloader)
     step_time = 0
     total_time = time()
-    for step in range(int(config.iql.training.max_timesteps)):
+    for step, batch in enumerate(dataloader):
         step_start_time = time()
-        batch = next(batch_loader)
         batch = [
             b.to(config.device, non_blocking=True)
             for b in batch

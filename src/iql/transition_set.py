@@ -4,7 +4,7 @@ from pathlib import Path
 import lmdb
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, RandomSampler
 
 TransitionSetSample = tuple[
     torch.Tensor,  # states
@@ -178,18 +178,25 @@ class TransitionDataLoader(DataLoader):
     def __init__(
         self,
         transition_set: TransitionSet,
-        batch_size,
-        num_workers
+        batch_size: int,
+        num_workers: int,
+        num_samples: int
     ):
+        num_samples *= batch_size * num_workers
         print(f"Creating TransitionDataLoader with batch size: {batch_size} \
               and num workers: {num_workers}")
         self.transition_set = transition_set
+        sampler = RandomSampler(
+            transition_set, replacement=True, num_samples=num_samples
+        )
         super().__init__(
             dataset=transition_set,
             batch_size=batch_size,
             num_workers=num_workers,
             persistent_workers=num_workers > 0,
-            shuffle=True,
             worker_init_fn=transition_set.init_lmdb,
             pin_memory=True,
+            sampler=sampler,
+            prefetch_factor=batch_size,
+            timeout=30
         )
