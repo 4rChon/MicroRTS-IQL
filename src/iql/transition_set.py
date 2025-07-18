@@ -197,5 +197,5 @@ class TransitionDataLoader(DataLoader):
             worker_init_fn=transition_set.init_lmdb,
             pin_memory=True,
             sampler=sampler,
-            timeout=30
+            timeout=120
         )
