@@ -182,7 +182,7 @@ class TransitionDataLoader(DataLoader):
         num_workers: int,
         num_samples: int
     ):
-        num_samples *= batch_size * num_workers
+        num_samples *= batch_size
         print(f"Creating TransitionDataLoader with batch size: {batch_size} \
               and num workers: {num_workers}")
         self.transition_set = transition_set
