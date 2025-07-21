@@ -74,7 +74,7 @@ def asymmetric_l2_loss(u: torch.Tensor, tau: float) -> torch.Tensor:
 class ImplicitQLearning:
     def __init__(
         self,
-        actor: nn.Module,
+        actor: ActorPolicy,
         actor_optimizer: torch.optim.Optimizer,
         q_network: TwinQ,
         q_optimizer: torch.optim.Optimizer,
@@ -106,81 +106,6 @@ class ImplicitQLearning:
         self.total_steps = 0
         self.device = device
 
-    def _update_v(
-        self,
-        observations: torch.Tensor,
-        actions: torch.Tensor,
-        log_dict: dict[str, Any],
-    ) -> torch.Tensor:
-        with torch.no_grad():
-            target_q = self.q_target(observations, actions)
-
-        v = self.vf(observations)
-        adv = target_q - v
-        v_loss = asymmetric_l2_loss(adv, self.iql_tau)
-        self.v_optimizer.zero_grad()
-        v_loss.backward()
-        self.v_optimizer.step()
-
-        log_dict["value_loss"] = v_loss.item()
-        return adv
-
-    def _update_q(
-        self,
-        next_v: torch.Tensor,
-        observations: torch.Tensor,
-        actions: torch.Tensor,
-        rewards: torch.Tensor,
-        terminals: torch.Tensor,
-        log_dict: dict[str, Any],
-    ):
-        targets = rewards \
-            + (1.0 - terminals.float()) \
-            * self.discount \
-            * next_v.detach()
-
-        qs = self.qf.both(observations, actions)
-        q_loss = sum(
-            F.mse_loss(q, targets) for q in qs
-        ) / len(qs)
-        self.q_optimizer.zero_grad()
-        q_loss.backward()  # type: ignore
-        self.q_optimizer.step()
-
-        log_dict["q_loss"] = q_loss.item()  # type: ignore
-
-        soft_update(self.q_target, self.qf, self.tau)
-
-    def _update_policy(
-        self,
-        adv: torch.Tensor,
-        observations: torch.Tensor,
-        actions: torch.Tensor,
-        action_masks: torch.Tensor,
-        log_dict: dict[str, Any],
-    ):
-        exp_adv = torch.exp(self.beta * adv.detach()).clamp(max=EXP_ADV_MAX)
-        policy_out = self.actor(observations, action_masks)
-        # bc_losses =
-        # ((policy_out - actions) ** 2).sum(dim=(-1)).mean(dim=(-1, -2))
-
-        batch_size = observations.shape[0]
-
-        log_probs = torch.log(policy_out + 1e-8)
-        nll = (-(actions * log_probs)).view(batch_size, -1)
-        exp_adv = exp_adv.view(batch_size, 1)
-        action_masks = action_masks.view(batch_size, -1)
-        policy_loss = (exp_adv * nll)[action_masks != 0]
-        policy_loss = policy_loss.sum() / exp_adv.shape[0]
-
-        self.actor_optimizer.zero_grad()
-        policy_loss.backward()
-        self.actor_optimizer.step()
-        self.actor_lr_schedule.step()
-
-        log_dict["actor_loss"] = policy_loss.item()
-        log_dict["actor_lr"] = self.actor_optimizer.param_groups[0]["lr"]
-
     def train(self, batch: TensorBatch) -> dict[str, Any]:
         (
             observations,
@@ -190,15 +115,50 @@ class ImplicitQLearning:
             dones,
             action_masks,
         ) = batch
-        log_dict: dict[Any, str] = {}
+        log_dict: dict[str, Any] = {}
 
+        # Calculate value loss
         with torch.no_grad():
-            next_v = self.vf(next_observations)
-        adv = self._update_v(observations, actions, log_dict)
+            min_Q = self.q_target(observations, actions)
+        v = self.vf(observations)
+        adv = min_Q - v
+        v_loss = asymmetric_l2_loss(adv, self.iql_tau)
+
+        self.v_optimizer.zero_grad()
+        v_loss.backward()
+        self.v_optimizer.step()
+
+        # Calculate Q-value loss
         rewards = rewards.squeeze(dim=-1)
         dones = dones.squeeze(dim=-1)
-        self._update_q(next_v, observations, actions, rewards, dones, log_dict)
-        self._update_policy(adv, observations, actions, action_masks, log_dict)
+        with torch.no_grad():
+            next_v = self.vf(next_observations)
+        q1, q2 = self.qf.both(observations, actions)
+        target = rewards + (1.0 - dones.float()) * self.discount * next_v
+        q_loss = (F.mse_loss(q1, target) + F.mse_loss(q2, target)) * 0.5
+
+        self.q_optimizer.zero_grad()
+        q_loss.backward()
+        self.q_optimizer.step()
+
+        soft_update(self.q_target, self.qf, self.tau)
+
+        # Calculate actor loss
+        prob = self.actor(observations, action_masks)
+        log_prob = torch.log(prob + 1e-8)
+        exp_a = torch.exp(adv.detach() * self.beta).clamp(max=EXP_ADV_MAX)
+        nll = -(log_prob * actions).sum(dim=(1, 2, 3))
+        actor_loss = (exp_a * nll).mean()
+
+        self.actor_optimizer.zero_grad()
+        actor_loss.backward()
+        self.actor_optimizer.step()
+        self.actor_lr_schedule.step()
+
+        log_dict["actor_loss"] = actor_loss.item()
+        log_dict["actor_lr"] = self.actor_optimizer.param_groups[0]["lr"]
+        log_dict["value_loss"] = v_loss.item()
+        log_dict["q_loss"] = q_loss.item()
 
         self.total_steps += 1
 
@@ -276,7 +236,6 @@ def train(config: TrainConfig, save_path: Path):
     print(f"Training IQL, Env: Gym-MicroRTS, Seed: {seed}")
     print("---------------------------------------")
 
-    # Initialize actor
     trainer = ImplicitQLearning(
         actor=actor,
         actor_optimizer=actor_optimizer,
