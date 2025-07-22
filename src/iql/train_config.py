@@ -22,7 +22,7 @@ class EnvConfig:
 
 @dataclass
 class DataConfig:
-    buffer_path: Path = Path("data/8x8/1v1/replay_buffer_3k_pristine")
+    buffer_path: Path = Path("data/8x8/1v1/transitions/train")
     save_interval: int = 10000
     log_interval: int = 10
     num_workers: int = 12

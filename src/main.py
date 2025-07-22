@@ -1,12 +1,13 @@
+import os
 from dataclasses import asdict
 from datetime import datetime
-import os
 from pathlib import Path
 
 import pyrallis
 import torch
-
 import wandb
+import wandb.util
+
 from iql.train import train
 from iql.train_config import TrainConfig
 
@@ -23,7 +24,7 @@ def main(config: TrainConfig):
 
     time = datetime.now().strftime("%H_%M_%S")
     date = datetime.now().strftime("%Y_%m_%d")
-    id = wandb.util.generate_id()  # type: ignore
+    id = wandb.util.generate_id()
     experiment_dir = Path(
         f"{config.environment.save_dir}/{config.environment.group}/{date}/{id}"
     )

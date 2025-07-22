@@ -257,7 +257,7 @@ def train(config: TrainConfig, save_path: Path):
     )
 
     step_time = 0
-    total_time = time()
+    start_time = time()
     for step, batch in enumerate(dataloader):
         step_start_time = time()
         batch = [
@@ -269,7 +269,7 @@ def train(config: TrainConfig, save_path: Path):
 
         if (step + 1) % config.data.log_interval == 0:
             log_dict["step_time"] = step_time / config.data.log_interval
-            log_dict["total_time"] = (time() - total_time)
+            log_dict["total_time"] = (time() - start_time)
             step_time = 0
             wandb.log(log_dict, step=trainer.total_steps)
             print(f"Training step: {trainer.total_steps}")

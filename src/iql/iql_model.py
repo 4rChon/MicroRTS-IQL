@@ -137,25 +137,10 @@ class ActorPolicy(nn.Module):
     def _sample(
         self,
         logits: torch.Tensor,
-        masks: torch.Tensor
     ) -> torch.Tensor:
         return torch.searchsorted(
-            self._probs(logits, masks).cumsum(dim=-1),
+            torch.softmax(logits, dim=-1).cumsum(dim=-1),
             torch.rand((logits.shape[:-1]), device=logits.device)[..., None]
-        )
-
-    def _probs(
-        self,
-        logits: torch.Tensor,
-        masks: torch.Tensor
-    ) -> torch.Tensor:
-        return torch.softmax(
-            torch.where(
-                masks.bool(),
-                logits,
-                self.mask_value  # type: ignore
-            ),
-            dim=-1
         )
 
     def forward(
@@ -167,14 +152,18 @@ class ActorPolicy(nn.Module):
         logits = self.mlp(x)
 
         grid_logits = logits.reshape(-1, self.h * self.w, self.act_c)
+        action_masks = action_masks.reshape(-1, self.h * self.w, self.act_c)
+
+        grid_logits = torch.where(  # type: ignore
+            action_masks.bool(),
+            grid_logits,
+            self.mask_value  # type: ignore
+        )
         split_logits = torch.split(grid_logits, self.act_dim, dim=-1)
 
-        action_masks = action_masks.reshape(-1, self.h * self.w, self.act_c)
-        split_action_masks = torch.split(action_masks, self.act_dim, dim=-1)
-
         action_probs = torch.cat([
-            self._probs(logits, masks) for (logits, masks)
-            in zip(split_logits, split_action_masks)
+            torch.softmax(logits, dim=-1) for logits
+            in split_logits
         ], dim=-1)
         return action_probs.reshape((-1, self.h, self.w, self.act_c))
 
@@ -184,18 +173,20 @@ class ActorPolicy(nn.Module):
         logits = self.mlp(x)
 
         grid_logits = logits.reshape(-1, self.h * self.w, self.act_c)
+        action_masks = action_masks.reshape(-1, self.h * self.w, self.act_c)
+
+        grid_logits = torch.where(  # type: ignore
+            action_masks.bool(),
+            grid_logits,
+            self.mask_value  # type: ignore
+        )
+
         split_logits = torch.split(grid_logits, self.act_dim, dim=-1)
 
-        action_masks = action_masks.reshape(-1, self.h * self.w, self.act_c)
-        split_action_masks = torch.split(action_masks, self.act_dim, dim=-1)
-
         return torch.cat([
-                (
-                    self._sample(logits, masks).squeeze()
-                    * masks.any(dim=-1).squeeze().long()
-                ).unsqueeze(-1) for (logits, masks)
-                in zip(split_logits, split_action_masks)
-            ], dim=-1)
+            self._sample(logits) for logits
+            in split_logits
+        ], dim=-1)
 
 
 class QFunction(nn.Module):
