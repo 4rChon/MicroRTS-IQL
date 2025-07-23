@@ -16,7 +16,6 @@ class EnvConfig:
     save_dir: str = "_exp"
     project: str = "PhD"
     group: str = "iql"
-    name: str = "microrts"
     episode_steps_max: int = 2000
 
 

@@ -37,7 +37,6 @@ def main(config: TrainConfig):
         id=id,
     ) as run:
         run.name = f"{config.environment.group}-{run.name} [{date} {time}]"
-        config.environment.name = run.name  # type: ignore
         run.config.update(asdict(config), allow_val_change=True)
 
         wandb.save(os.path.join(experiment_dir, "*.pt"))
