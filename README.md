@@ -88,51 +88,58 @@ Create a YAML configuration file with the following structure:
 
 ```yaml
 seed: 42
-debug: false
-device: "cuda"
-render: false
+debug: False
+device: cuda
+render: True
 
-eval:
-  eval: false
-  envs_num: 8
-  rollouts_num: 200
+eval: {
+  eval: True,
+  rollouts_num: 100,
+  seed_count: 4,
+}
 
-environment:
-  save_dir: "_exp"
-  project: "PhD"
-  group: "iql"
-  name: "microrts"
-  episode_steps_max: 2000
+environment: {
+  save_dir: _exp,
+  project: PhD,
+  group: iql,
+  episode_steps_max: 2000,
+}
 
-data:
-  buffer_path: "data/8x8/1v1/replay_buffer_3k_pristine"
-  save_interval: 10000
-  log_interval: 10
+data: {
+  buffer_path: "../data/8x8/1v1/transitions/train",
+  save_interval: 100000,
+  log_interval: 10,
+  num_workers: 12,
+}
 
-iql:
-  model:
-    hidden_dim: 256
-    dropout: 0.1
-    load: false
-    load_path: "model/model.pt"
-  
-  training:
-    train: true
-    tau: 0.005
-    beta: 3.0
-    iql_tau: 0.7
-    discount: 0.99
-    max_timesteps: 1000000
-    vf_lr: 3e-4
-    qf_lr: 3e-4
-    actor_lr: 3e-4
-    batch_size: 64
-    reward_scale: 1.0
-  
-  eval:
-    episodes_num: 10
-    longer_episodes_num: 100
-    eval_freq: 1000
+iql: {
+  model: {
+    dropout: 0.1,
+    hidden_dim: 256,
+    hidden_layers: 2,
+    load: True,
+    load_path: "./iql_model.pt",
+  },
+  training: {
+    train: False,
+    iql_tau: 0.1,
+    tau: 0.005,
+    beta: 4.0,
+    discount: 0.99,
+    max_timesteps: 800000,
+    vf_lr: 3e-4,
+    qf_lr: 3e-4,
+    actor_lr: 3e-4,
+    batch_size: 32,
+    reward_scale: 1.0,
+    warmup_pct: 0.45,
+  },
+  eval: {
+    eval_freq: 10000,
+    episodes_num: 10,
+    longer_episodes_num: 100,
+  }
+}
 ```
 
 ## License

@@ -8,8 +8,7 @@ import torch
 import wandb
 import wandb.util
 
-from iql.train import train
-from iql.train_config import TrainConfig
+from iql_microrts.train_config import TrainConfig
 
 pyrallis.decode.register(  # type: ignore
     torch.device,
@@ -41,7 +40,17 @@ def main(config: TrainConfig):
 
         wandb.save(os.path.join(experiment_dir, "*.pt"))
 
-        train(config, experiment_dir)
+        if config.eval.eval:
+            from iql_microrts.eval import eval
+            start_seed = config.seed
+            print(f"Evaluating IQL with seeds from {start_seed} to "
+                  f"{start_seed + config.eval.seed_count - 1}")
+            for seed in range(start_seed, start_seed + config.eval.seed_count):
+                config.seed = seed
+                eval(config, experiment_dir)
+        else:
+            from iql_microrts.train import train
+            train(config, experiment_dir)
 
 
 if __name__ == "__main__":

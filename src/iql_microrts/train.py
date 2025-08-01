@@ -16,9 +16,10 @@ import torch.nn.functional as F
 import wandb
 
 from env_utils import get_env_spec, make_eval_env, sample_maps
-from iql.iql_model import ActorPolicy, IQLNetwork, TwinQ, ValueFunction
-from iql.train_config import IQLTrainingConfig, TrainConfig
-from iql.transition_set import TransitionDataLoader, TransitionSet
+from iql_microrts.iql_model import (ActorPolicy, IQLNetwork, TwinQ,
+                                    ValueFunction)
+from iql_microrts.train_config import IQLTrainingConfig, TrainConfig
+from iql_microrts.transition_set import TransitionDataLoader, TransitionSet
 from utils import set_seed_everywhere
 
 TensorBatch = list[torch.Tensor]
@@ -200,6 +201,7 @@ def train(config: TrainConfig, save_path: Path):
 
     replay_buffer = TransitionSet(
         config.data.buffer_path,
+        seed=seed,
         map_size_gb=200,
         state_dim=state_dim,
         action_dim=action_dim,
@@ -208,8 +210,8 @@ def train(config: TrainConfig, save_path: Path):
     dataloader = TransitionDataLoader(
         replay_buffer,
         batch_size=config.iql.training.batch_size,
+        num_samples=config.iql.training.max_timesteps,
         num_workers=config.data.num_workers,
-        num_samples=config.iql.training.max_timesteps
     )
 
     print(f"Replay buffer size: {len(replay_buffer)}")
@@ -256,6 +258,7 @@ def train(config: TrainConfig, save_path: Path):
         ais=[gym_microrts.microrts_ai.coacAI]
     )
 
+    max_step_time = config.environment.time_seconds_max
     step_time = 0
     start_time = time()
     for step, batch in enumerate(dataloader):
@@ -270,6 +273,9 @@ def train(config: TrainConfig, save_path: Path):
         if (step + 1) % config.data.log_interval == 0:
             log_dict["step_time"] = step_time / config.data.log_interval
             log_dict["total_time"] = (time() - start_time)
+            if config.environment.time_seconds_max > 0:
+                max_step_time = max(0, max_step_time - step_time)
+                log_dict["remaining_time"] = max_step_time
             step_time = 0
             wandb.log(log_dict, step=trainer.total_steps)
             print(f"Training step: {trainer.total_steps}")
@@ -293,6 +299,9 @@ def train(config: TrainConfig, save_path: Path):
                 config.render
             ).mean()
             wandb.log({"eval_score": eval_score}, step=trainer.total_steps)
+        if max_step_time == 0:
+            print("Max step time reached, stopping training.")
+            break
 
     replay_buffer.close()
     env.close()

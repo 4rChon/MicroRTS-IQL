@@ -6,9 +6,10 @@ import torch
 
 @dataclass
 class EvalConfig:
+    # rollouts_num * seed_count = total number of games to evaluate
     eval: bool = False
-    envs_num: int = 8
     rollouts_num: int = 200
+    seed_count: int = 4
 
 
 @dataclass
@@ -17,6 +18,7 @@ class EnvConfig:
     project: str = "PhD"
     group: str = "iql"
     episode_steps_max: int = 2000
+    time_seconds_max: int = -1  # -1 means no limit
 
 
 @dataclass

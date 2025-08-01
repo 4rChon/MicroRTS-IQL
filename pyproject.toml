@@ -4,7 +4,6 @@ version = "0.1.0"
 description = ""
 authors = ["Benjamin Bugeja <bendbug@gmail.com>"]
 readme = "README.md"
-package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -12,7 +11,7 @@ numpy = "<2"
 lmdb = "^1.5.1"
 wandb = "^0.20.1"
 pillow = "^11.2.1"
-gym-microrts = {path = "lib/gym_microrts", develop = true}
+gym-microrts = {path = "./lib/gym_microrts", develop = true}
 pyrallis = "^0.3.1"
 
 [tool.poetry.group.torch.dependencies]

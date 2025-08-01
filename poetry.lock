@@ -320,13 +320,13 @@ smmap = ">=3.0.1,<6"
 
 [[package]]
 name = "gitpython"
-version = "3.1.44"
+version = "3.1.45"
 description = "GitPython is a Python library used to interact with Git repositories"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "GitPython-3.1.44-py3-none-any.whl", hash = "sha256:9e0e10cda9bed1ee64bc9a6de50e7e38a9c9943241cd7f585f6df3ed28011110"},
-    {file = "gitpython-3.1.44.tar.gz", hash = "sha256:c87e30b26253bf5418b01b0660f818967f3c503193838337fe5e573331249269"},
+    {file = "gitpython-3.1.45-py3-none-any.whl", hash = "sha256:8908cb2e02fb3b93b7eb0f2827125cb699869470432cc885f019b8fd0fccff77"},
+    {file = "gitpython-3.1.45.tar.gz", hash = "sha256:85b0ee964ceddf211c41b9f27a49086010a190fd8132a24e21f362a4b36a791c"},
 ]
 
 [package.dependencies]
@@ -462,56 +462,56 @@ tests = ["pytest"]
 
 [[package]]
 name = "lmdb"
-version = "1.7.2"
+version = "1.7.3"
 description = "Universal Python binding for the LMDB 'Lightning' Database"
 optional = false
 python-versions = "*"
 files = [
-    {file = "lmdb-1.7.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:b0a0272678543113f7bfe0e859417b4b7f4b8f394bc2436e805b4bc2e114415b"},
-    {file = "lmdb-1.7.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:7a51b8d293a1beaeb52d400137d543bdfa27bbe344a0c853e161179bb45ab58e"},
-    {file = "lmdb-1.7.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cd59ad098502fab73627ff70b55fbbc40bcbb85212fbfd7764d7a9a6fc048915"},
-    {file = "lmdb-1.7.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9d924e71d86673749bf6622ee72f8b8b2b76128d3e255d127c9fc826e9a4b962"},
-    {file = "lmdb-1.7.2-cp310-cp310-win_amd64.whl", hash = "sha256:597f332607f2034f1a960beac2d5e694390a70bb8440762e0cafa917e527536d"},
-    {file = "lmdb-1.7.2-cp310-cp310-win_arm64.whl", hash = "sha256:4a2e1355788c61de6a07ce57291b9cb2496770298ed858b8e3234cf5efd229cd"},
-    {file = "lmdb-1.7.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:52624cdd176c3712219c2b0b2bed2d814a2fe65ee5cac6a4e68e74bb5a4c8999"},
-    {file = "lmdb-1.7.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:e032a1766589eb3658aff33741586fcb892736e87297fb81572c417159804b8a"},
-    {file = "lmdb-1.7.2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1cd31619bea60c5832ee0a3cbf7eb07473f325d9751edc81a509aa44d7ea3448"},
-    {file = "lmdb-1.7.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:68a4462f63146084823c0664faef007f4ab532efc638fd330424c633f8cab0ef"},
-    {file = "lmdb-1.7.2-cp311-cp311-win_amd64.whl", hash = "sha256:84c84fe1873a1db5a28321926d6967ba222c809824fd95a12d0c3983b5d36dd0"},
-    {file = "lmdb-1.7.2-cp311-cp311-win_arm64.whl", hash = "sha256:dd465b7fa488fcd996df2c10238e527ead9db5c478c4d8bc3029b8f908e717de"},
-    {file = "lmdb-1.7.2-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:d58d89e869e6bb8e9b129e88a8d1fef7c653041e1637d7ca3baa2ae72cf02d5c"},
-    {file = "lmdb-1.7.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:1966dbdb8edad997382d0277ce974ed5f27e743cb044169ba169b2ad6a02df13"},
-    {file = "lmdb-1.7.2-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7ff72eebbdef70f8eadb5ddd55beeef1a1590a62e02b9c5a6e545a9bb1567314"},
-    {file = "lmdb-1.7.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f574ef86eb9f78c6879ee6f72c4712a5d0a36a608d6f9f0058a6c5b612f586b8"},
-    {file = "lmdb-1.7.2-cp312-cp312-win_amd64.whl", hash = "sha256:3bebb84c8cdc56c877ab07dd0f548c7654ae7d21615d314fdd525e43775b4aa2"},
-    {file = "lmdb-1.7.2-cp312-cp312-win_arm64.whl", hash = "sha256:e95b79204f2ea060e1abf812ac12a4dfc3811312df6e1c66520b3745e109bdd2"},
-    {file = "lmdb-1.7.2-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:20ceb8b21131706a5bd4741fed94d560f2139a2f0490d72ef09e53a1f250bef9"},
-    {file = "lmdb-1.7.2-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:cbee8050c1b4f101a742ac239b4241bbd74e3fc1a1d48985d639ef7f10534abc"},
-    {file = "lmdb-1.7.2-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fd44b91abe2df870de83a142b06909316704ac314bc552cbb37a0ea5f7049565"},
-    {file = "lmdb-1.7.2-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0d63e3e1cd82c391c7c036f4f696db5b2bec0077961622b6af2f61a761e4fa18"},
-    {file = "lmdb-1.7.2-cp313-cp313-win_amd64.whl", hash = "sha256:30be676b0bf78493b8dda5a40b090176b44aec5d244f3aadfed8b2ea2334670a"},
-    {file = "lmdb-1.7.2-cp313-cp313-win_arm64.whl", hash = "sha256:19acc24169fcfcb1b18091c065a32ad247ae475bd540a459c3e5302921815b80"},
-    {file = "lmdb-1.7.2-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:6c935ec00850fe2a459e279b55586e6c73c8d372725a7364b30ffdeddeee8aff"},
-    {file = "lmdb-1.7.2-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ea4bafab51e7dcf3b9fd6628a9df9b87476d248ac8a185b66ce69a0098c128a7"},
-    {file = "lmdb-1.7.2-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a92463e7c07096d13ef8e33927511f2471789e56bab1883c72d6b1b9c9f195fa"},
-    {file = "lmdb-1.7.2-cp36-cp36m-win_amd64.whl", hash = "sha256:587df176b3a440d45dbe3fd43d4f72dab3fc572e6f725292fac31f7fe3898f58"},
-    {file = "lmdb-1.7.2-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:3435a0ac2515e52f17a397494f99b6925538abee35d8bbbfc222e29154884231"},
-    {file = "lmdb-1.7.2-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:dc4456eeca2554291a80dd0854ee2673388d33176801bc8a411873147b9e76de"},
-    {file = "lmdb-1.7.2-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:539751e0ff4dac01872c9b6ec67a4e00bd16e185db7960d87241b59aa9078fb6"},
-    {file = "lmdb-1.7.2-cp37-cp37m-win_amd64.whl", hash = "sha256:aed13e6330beb19f4946b2e5100da579e5b8f461b6a76358439978a0f0b4fd1b"},
-    {file = "lmdb-1.7.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:74a9e9817ac5696d7d3683a95dcf2ecf12648e58f31f53d6c76663de947587bb"},
-    {file = "lmdb-1.7.2-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:458fadf91c9607e9f2c9c1752be5b6143d541e579ba4fc68e3f0af15f3f92a7b"},
-    {file = "lmdb-1.7.2-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:58888cd17a5270f98b85b4966a73e95bc29c033f89166c7b1537cb83c6e446ed"},
-    {file = "lmdb-1.7.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:472dfebcfd967c44c8d9afaeb34af01cbca10a153728254a7c6ba28443ccabdd"},
-    {file = "lmdb-1.7.2-cp38-cp38-win_amd64.whl", hash = "sha256:a74710df795096045a69c593310c365687678c3bcf8be7329d2ebba42b05304e"},
-    {file = "lmdb-1.7.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:781df3c727d9adc9c93937d129847a0c5f718771d20be822a7ecb9f91ef44bc8"},
-    {file = "lmdb-1.7.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:d62b04d07234be1c43c1e369d8f36e40cce21c63e8c4a0a6a0bf04f502eb9b04"},
-    {file = "lmdb-1.7.2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:076efe4e5a62af440b283259d8fc64034abe67d31c0aae7415a4b28a29dd5457"},
-    {file = "lmdb-1.7.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e71ec981bb7d2d8be23d0eef9d824dc1e5b038944f3402ecb241f24b59c437c4"},
-    {file = "lmdb-1.7.2-cp39-cp39-win_amd64.whl", hash = "sha256:29da8a38bdae4683ebd8f074faf2ede3c58ad99cfe143e92bce2c8068dc5dd38"},
-    {file = "lmdb-1.7.2-cp39-cp39-win_arm64.whl", hash = "sha256:ffd70ef8dfd83e138f847ef13ee432c44825b46836f87578e06a675c0a3e9a63"},
-    {file = "lmdb-1.7.2-py3-none-any.whl", hash = "sha256:3f3fa46569ac2ab70562620d0c3f5918e57695f88a4d94697745041192045937"},
-    {file = "lmdb-1.7.2.tar.gz", hash = "sha256:fa386cdd2ab077b119609af5a058106d0698ba3686f6e0c14af027c607db32c2"},
+    {file = "lmdb-1.7.3-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:d604665b79eb55b41fb8eb11da12438e59efcf1f3e27aeabd7a112c10932f17a"},
+    {file = "lmdb-1.7.3-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:19b6c726d69f163fe413befa2daa5b3cfb3b9f18b2aac99b3af40b70b7b64dd7"},
+    {file = "lmdb-1.7.3-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:94ba8c056f001ea138e478a9faef0c3a54e84d6f2525b1e6ef771563e143e682"},
+    {file = "lmdb-1.7.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1822c07a2a090b283e8ff68e3c83e361a99872fb6f2da1b96f2cbee33cc59763"},
+    {file = "lmdb-1.7.3-cp310-cp310-win_amd64.whl", hash = "sha256:11b62fd18d9bc41c5a8270453d76e317dec4cd744ba0a6ce65807a13bdd02d6d"},
+    {file = "lmdb-1.7.3-cp310-cp310-win_arm64.whl", hash = "sha256:8fdf1f0951cc51e1b53903c14448d543cb595c701896f7698320f8db1bfab8ae"},
+    {file = "lmdb-1.7.3-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:72e21d1752b7044fba00c77277e482683db72a62f0a2603c30fce66e3b26306d"},
+    {file = "lmdb-1.7.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:2bea10371d95aaae0a48d0b34f76fd6580e73b20190e7834d83def04889b7e55"},
+    {file = "lmdb-1.7.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f9d7b6497be20e07b17f41a171b1663dfcfe5eac50fe003a256be5231ca5a121"},
+    {file = "lmdb-1.7.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f939c5222f5725afb5dbdbbd9f2ef20cc1c9bad3696028bf9e5e62ba14e016d2"},
+    {file = "lmdb-1.7.3-cp311-cp311-win_amd64.whl", hash = "sha256:2f42cc1d168fbd625e7981cf45fd8af15a2fb071aaa284e355c7036ad55e2ac7"},
+    {file = "lmdb-1.7.3-cp311-cp311-win_arm64.whl", hash = "sha256:8e1dc64e139bedaeb2aaa133d1139fdfad53e48a64cd772fb9a1d70fc403c1bc"},
+    {file = "lmdb-1.7.3-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:a0c9d7b35adf001884687ca0c256f6c97aedfcc8bb118da92dcdef41e025cb92"},
+    {file = "lmdb-1.7.3-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:0522361cb78bc9e43003689f2dd3842e4ff8a9a8c11d41b942396f7b94602109"},
+    {file = "lmdb-1.7.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:92ee64c2de8185def1eac0d6272626cb57443895b5cd6f35eda848c0426e678e"},
+    {file = "lmdb-1.7.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:50438f2b333f53539805d3565c0049507e743dff6280229980f1717ef5fcb0ac"},
+    {file = "lmdb-1.7.3-cp312-cp312-win_amd64.whl", hash = "sha256:a2cef8c30b6d5138ef2f7ed1fff661c497f988c5c7e38699295502bfd148a9ce"},
+    {file = "lmdb-1.7.3-cp312-cp312-win_arm64.whl", hash = "sha256:4aa31d12b16fa0d4ab5d49a347a352eb65f8887ae52e9bfe1811b5daff83a064"},
+    {file = "lmdb-1.7.3-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:3ef46b01b09afe8193449330ea6c0350891d1cdc43cbd20aec8ecdbe40def7d1"},
+    {file = "lmdb-1.7.3-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:88d9b76a11e7458801064df8c837fe23ca28b714205dce05f17a58da3777db6a"},
+    {file = "lmdb-1.7.3-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:39dd69f3dc0910ed15ed5db708f195dc3c7f3275d1fb1a8f0a2a4b31db69cdd0"},
+    {file = "lmdb-1.7.3-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ad0dbec5586bb991c9ab05f5a26d950e8fa3583e632baf2604512f8059028139"},
+    {file = "lmdb-1.7.3-cp313-cp313-win_amd64.whl", hash = "sha256:d25279380b28f01f8f1ef0f783488808bfc2b657c1705c6f383b77c9d04cd8a6"},
+    {file = "lmdb-1.7.3-cp313-cp313-win_arm64.whl", hash = "sha256:1f22e79cc7cebc643c20f1699092bddb6d648d959f4f73becce0befb52690c97"},
+    {file = "lmdb-1.7.3-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:80413bd0e12ee4507fa0a85772a1660aa93ab70dedba99b25882d5d2e6834483"},
+    {file = "lmdb-1.7.3-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7b76c7ae1eaaf6a86f0b575def874b941d036a6eb93c56a0f427b510bc867993"},
+    {file = "lmdb-1.7.3-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fc4d8d468dd8cbf9034b48959fc80a4b770a9f6a5889c31cd0d56e9a4bfe4997"},
+    {file = "lmdb-1.7.3-cp36-cp36m-win_amd64.whl", hash = "sha256:f8be65975065d43122dd02f64ff245b902612114cd7f8e5d09f5109483143dc5"},
+    {file = "lmdb-1.7.3-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:428fd0ab9a1a71df5ecbfec8cfba907723be0b94c84fa80831acdbc8b77b566a"},
+    {file = "lmdb-1.7.3-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e3bbb04483300dc14f685b2245a4fcf8400dbc1ee396761c87fc2170da9aba49"},
+    {file = "lmdb-1.7.3-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d2c970653d5423e52bdcbb1a1c13e08590abaedc83745994f50b705093f054cc"},
+    {file = "lmdb-1.7.3-cp37-cp37m-win_amd64.whl", hash = "sha256:320a7d16b9ebaca8b2de39153a18cefe8b6fb9cc3ada42f060ccb1ab0ed89cce"},
+    {file = "lmdb-1.7.3-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:825ba8e83b8b5bdfda362eac573a39f045c088c2a26dd3126c4e7fa63a04d331"},
+    {file = "lmdb-1.7.3-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:6cbeeb02e83f7b8551a646f77b87f5ac5b206399ed9f8f89d09e9ec56a139399"},
+    {file = "lmdb-1.7.3-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:f12b508807d353f877e437d762c923108f5233075b48abe2335dae48228153bf"},
+    {file = "lmdb-1.7.3-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ce6955d1a387e19c3f793ff4a105e4dc56405a9b192644b418779fff1a3c0a8f"},
+    {file = "lmdb-1.7.3-cp38-cp38-win_amd64.whl", hash = "sha256:75bfd980a6348b14337c5a63343d02dc57c3b9b6220103dd8e4ad4e9c43a2b9b"},
+    {file = "lmdb-1.7.3-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:dace227f0d7aa22fd0bce4f43a549bee35b08e30c06285ae178dbf891b659d3b"},
+    {file = "lmdb-1.7.3-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:5e03d11cc29b33df4464a17955e42c73ec3bb2030b5005d7dbd7445c11545fc7"},
+    {file = "lmdb-1.7.3-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:bc669164f60e1508901085073b6deae24b147d16ed98bece4f7fa8b4bb9edfff"},
+    {file = "lmdb-1.7.3-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ea36951a87945ca8181a7393d1709f8d6ab8a187100485115cad1d8e03a41cae"},
+    {file = "lmdb-1.7.3-cp39-cp39-win_amd64.whl", hash = "sha256:020608dc83b81283c0ea9b2886f037ada113d7b2ee0f6cd5c3be57842e64d203"},
+    {file = "lmdb-1.7.3-cp39-cp39-win_arm64.whl", hash = "sha256:413d55fe192ad221175f03941ee1bb71c2c059c615003b267a6ed203b713fabf"},
+    {file = "lmdb-1.7.3-py3-none-any.whl", hash = "sha256:4cd7fb79b2c69dcf564d4eec36237e0efc303559176b60ff36fb47ccd3b8b5bb"},
+    {file = "lmdb-1.7.3.tar.gz", hash = "sha256:d4a27b7af4fe38f3409d9fbfbf47b617b3d94dee98a00bc8c2a8336ccd3f9b15"},
 ]
 
 [package.dependencies]
@@ -1305,13 +1305,13 @@ use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
 name = "sentry-sdk"
-version = "2.33.0"
+version = "2.34.1"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "sentry_sdk-2.33.0-py2.py3-none-any.whl", hash = "sha256:a762d3f19a1c240e16c98796f2a5023f6e58872997d5ae2147ac3ed378b23ec2"},
-    {file = "sentry_sdk-2.33.0.tar.gz", hash = "sha256:cdceed05e186846fdf80ceea261fe0a11ebc93aab2f228ed73d076a07804152e"},
+    {file = "sentry_sdk-2.34.1-py2.py3-none-any.whl", hash = "sha256:b7a072e1cdc5abc48101d5146e1ae680fa81fe886d8d95aaa25a0b450c818d32"},
+    {file = "sentry_sdk-2.34.1.tar.gz", hash = "sha256:69274eb8c5c38562a544c3e9f68b5be0a43be4b697f5fd385bf98e4fbe672687"},
 ]
 
 [package.dependencies]
@@ -1706,4 +1706,4 @@ workspaces = ["wandb-workspaces"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "51148f3a16052eb1c53fea0c8f21ba2799e60020c9dbdbc11066cb84c3260ca8"
+content-hash = "12214da3a6a41fdc62d7b3e861b4a6c90b6ea0739234449f066581a6b2e8da49"

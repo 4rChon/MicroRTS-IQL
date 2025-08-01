@@ -6,6 +6,8 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset, RandomSampler
 
+from utils import set_seed_everywhere
+
 TransitionSetSample = tuple[
     torch.Tensor,  # states
     torch.Tensor,  # next states
@@ -70,6 +72,7 @@ class TransitionSet(Dataset):
         path: Path,
         state_dim: tuple[int, int, int],
         action_dim: list[int],
+        seed: int,
         map_size_gb: int = 25,
         reward_scale: float = 1.0
     ):
@@ -84,6 +87,7 @@ class TransitionSet(Dataset):
         self._state_dim = state_dim
         self._action_dim = action_dim
         self.length = -1
+        self.seed = seed
 
     @property
     def size(self) -> int:
@@ -166,6 +170,7 @@ class TransitionSet(Dataset):
     def init_lmdb(self, worker_id: int = 0) -> None:
         print("Initializing LMDB environment for worker", worker_id)
         self._open_lmdb()
+        set_seed_everywhere(self.seed + worker_id)
         self._init_metrics()
 
         self._worker_id = worker_id
@@ -179,12 +184,12 @@ class TransitionDataLoader(DataLoader):
         self,
         transition_set: TransitionSet,
         batch_size: int,
+        num_samples: int,
         num_workers: int,
-        num_samples: int
     ):
         num_samples *= batch_size
-        print(f"Creating TransitionDataLoader with batch size: {batch_size} \
-              and num workers: {num_workers}")
+        print(f"Creating TransitionDataLoader with batch size: {batch_size} "
+              f"and num workers: {num_workers}")
         self.transition_set = transition_set
         sampler = RandomSampler(
             transition_set, replacement=True, num_samples=num_samples
